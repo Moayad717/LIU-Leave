@@ -1,6 +1,3 @@
-// String literal union types matching the Prisma enums in schema.prisma
-// These are compatible with the generated @prisma/client types.
-
 export type Role = "PROFESSOR" | "ADMIN"
 export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED"
 

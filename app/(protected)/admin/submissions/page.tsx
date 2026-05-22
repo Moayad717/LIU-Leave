@@ -77,7 +77,6 @@ export default async function SubmissionsPage({ searchParams }: Props) {
         <p className="text-muted-foreground">Review and process professor leave requests.</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Total", value: counts.total, valueColor: "text-foreground", iconBg: "bg-muted", icon: ClipboardList, iconColor: "text-muted-foreground" },
@@ -97,12 +96,10 @@ export default async function SubmissionsPage({ searchParams }: Props) {
         ))}
       </div>
 
-      {/* Filters — wrapped in Suspense because SubmissionsFilter uses useSearchParams */}
       <Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-44" /><Skeleton className="h-10 w-36" /></div>}>
         <SubmissionsFilter campuses={campuses} />
       </Suspense>
 
-      {/* Table */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">

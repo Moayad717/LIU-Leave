@@ -21,7 +21,6 @@ const CAMPUSES = [
 async function main() {
   console.log("Wiping database...")
 
-  // Delete in FK-safe order
   await prisma.leaveRequest.deleteMany()
   await prisma.account.deleteMany()
   await prisma.user.deleteMany()
@@ -31,7 +30,6 @@ async function main() {
 
   console.log("All data deleted.")
 
-  // Create campuses
   for (const name of CAMPUSES) {
     await prisma.campus.create({ data: { name } })
   }

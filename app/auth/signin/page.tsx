@@ -6,7 +6,6 @@ import { GraduationCap } from "lucide-react"
 export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60">
-      {/* Decorative blobs */}
       <div className="pointer-events-none absolute -top-48 -left-48 w-[600px] h-[600px] rounded-full bg-blue-100/60 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-48 -right-48 w-[600px] h-[600px] rounded-full bg-indigo-100/60 blur-3xl" />
       <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-white/40 blur-3xl" />

@@ -55,7 +55,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Professor info */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
@@ -78,7 +77,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Admin comment */}
       {req.adminComment && (
         <Alert variant={req.status === "REJECTED" ? "destructive" : "success"}>
           <MessageSquare className="h-4 w-4" />
@@ -87,7 +85,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
         </Alert>
       )}
 
-      {/* Dates */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Selected Dates</CardTitle>
@@ -104,7 +101,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Review form — only for pending requests */}
       {isPending && (
         <>
           <Separator />

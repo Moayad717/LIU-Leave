@@ -35,7 +35,6 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
 
   const holidayDates = holidays.map((h) => new Date(h.iso))
 
-  // Restore draft from localStorage on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(DRAFT_KEY)
@@ -104,7 +103,6 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
 
   return (
     <div className="space-y-6">
-      {/* Counter */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant={selected.length > 0 ? "default" : "secondary"} className="text-sm px-3 py-1">
@@ -141,7 +139,6 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
         )}
       </div>
 
-      {/* Calendar */}
       <div className="flex justify-center overflow-x-auto">
         <DayPicker
           mode="multiple"
@@ -202,7 +199,6 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
         />
       </div>
 
-      {/* Selected dates list */}
       {sortedSelected.length > 0 && (
         <Card className="bg-muted/30">
           <CardContent className="p-4">
@@ -229,7 +225,6 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
         </Card>
       )}
 
-      {/* Holiday legend */}
       {holidays.length > 0 && (
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="font-medium text-amber-600">Holidays:</span>
@@ -241,7 +236,6 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
         </div>
       )}
 
-      {/* Submit */}
       <Button
         onClick={handleSubmit}
         disabled={selected.length === 0 || isPending}

@@ -23,7 +23,6 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/auth/signin", nextUrl))
   }
 
-  // session.user is guaranteed non-null here
   const user = session!.user
   const isAdmin = user.role === "ADMIN"
   const hasOnboarded = !!user.campusId

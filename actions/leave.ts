@@ -16,7 +16,6 @@ export async function submitLeaveRequest(dates: string[]) {
 
   const { start, end } = getCurrentAcademicYear()
 
-  // Block only if a PENDING or APPROVED request already exists
   const existing = await db.leaveRequest.findFirst({
     where: {
       professorId: session.user.id,
@@ -28,12 +27,10 @@ export async function submitLeaveRequest(dates: string[]) {
     return { error: "You already have an active leave request for this academic year." }
   }
 
-  // Parse and validate dates
   const parsedDates = dates.map((d) => new Date(d))
   const invalid = parsedDates.some((d) => isNaN(d.getTime()))
   if (invalid) return { error: "One or more dates are invalid." }
 
-  // Ensure all dates fall within the current academic year
   const outOfRange = parsedDates.some((d) => d < start || d > end)
   if (outOfRange) {
     return { error: "All selected dates must fall within the current academic year." }

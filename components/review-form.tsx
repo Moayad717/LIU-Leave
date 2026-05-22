@@ -109,7 +109,6 @@ export function ReviewForm({ requestId, dates }: Props) {
 
   return (
     <div className="space-y-4 rounded-lg border border-red-200 bg-red-50/60 p-4">
-      {/* Date chip selector */}
       <div>
         <p className="text-sm font-medium text-red-900 mb-1">Flag conflicting dates</p>
         <p className="text-xs text-red-500 mb-3">
@@ -150,7 +149,6 @@ export function ReviewForm({ requestId, dates }: Props) {
         </div>
       </div>
 
-      {/* Extra note */}
       <div className="space-y-1.5">
         <Label htmlFor="reject-note" className="text-red-900 text-sm">
           Additional note{" "}
@@ -168,7 +166,6 @@ export function ReviewForm({ requestId, dates }: Props) {
         />
       </div>
 
-      {/* Live preview */}
       {preview && (
         <div className="rounded-md border border-red-100 bg-white px-3 py-2.5 text-xs">
           <p className="text-muted-foreground font-medium mb-1">Professor will see:</p>

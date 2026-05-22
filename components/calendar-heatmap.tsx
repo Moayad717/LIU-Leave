@@ -77,7 +77,6 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
     <div className="space-y-4">
       <div className="overflow-x-auto">
         <div className="min-w-max">
-          {/* Month labels */}
           <div className="flex mb-1 ml-8">
             {weeks.map((_, colIndex) => {
               const label = monthLabels.find((l) => l.colIndex === colIndex)
@@ -90,7 +89,6 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
           </div>
 
           <div className="flex gap-0">
-            {/* Day labels */}
             <div className="flex flex-col mr-1">
               {DAYS.map((day, i) => (
                 <div key={day} className="h-4 mb-0.5 text-xs text-muted-foreground text-right pr-1 leading-4 w-7">
@@ -99,7 +97,6 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
               ))}
             </div>
 
-            {/* Grid */}
             <div className="flex gap-0.5">
               {weeks.map((week, colIndex) => (
                 <div key={colIndex} className="flex flex-col gap-0.5">
@@ -127,7 +124,6 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
             </div>
           </div>
 
-          {/* Legend */}
           <div className="flex items-center gap-1.5 mt-3 ml-8">
             <span className="text-xs text-muted-foreground">Less</span>
             {[0, 1, 2, 3, 4].map((v) => (
@@ -143,7 +139,6 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
         </div>
       </div>
 
-      {/* Day detail panel */}
       {selectedDay ? (
         <div className="rounded-lg border bg-muted/40 p-4">
           <div className="flex items-center justify-between mb-3">

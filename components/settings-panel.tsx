@@ -62,7 +62,6 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
 
   return (
     <div className="space-y-6">
-      {/* Submissions toggle */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -96,7 +95,6 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
         </CardContent>
       </Card>
 
-      {/* Holidays */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -108,7 +106,6 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Add form */}
           <div className="flex flex-wrap gap-3 items-end rounded-lg border bg-muted/30 p-4">
             <div className="space-y-1.5">
               <Label htmlFor="holiday-date">Date</Label>
@@ -143,7 +140,6 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
             </Button>
           </div>
 
-          {/* Holiday list */}
           {holidays.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               No holidays configured.

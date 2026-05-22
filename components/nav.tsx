@@ -49,7 +49,6 @@ export function Nav({ user }: { user: NavUser }) {
     <header className="sticky top-0 z-50 w-full border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 font-bold text-primary group">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground group-hover:bg-primary/90 transition-colors">
               <GraduationCap className="w-5 h-5" />
@@ -57,7 +56,6 @@ export function Nav({ user }: { user: NavUser }) {
             <span className="text-lg">LIU Leave</span>
           </Link>
 
-          {/* Nav links */}
           <nav className="hidden md:flex items-center gap-1">
             {links.map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href}>
@@ -78,7 +76,6 @@ export function Nav({ user }: { user: NavUser }) {
             ))}
           </nav>
 
-          {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 h-9 px-2">
@@ -101,7 +98,6 @@ export function Nav({ user }: { user: NavUser }) {
                 </div>
               </DropdownMenuLabel>
 
-              {/* Mobile nav links */}
               <DropdownMenuSeparator className="md:hidden" />
               {links.map(({ href, label, icon: Icon }) => (
                 <DropdownMenuItem key={href} asChild className="md:hidden">

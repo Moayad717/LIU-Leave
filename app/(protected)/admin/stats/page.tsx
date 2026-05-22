@@ -47,7 +47,6 @@ export default async function StatsPage() {
     }),
   ])
 
-  // ── Heatmap data ──────────────────────────────────────────────────────────
   const heatmapData: Record<string, number> = {}
   const heatmapDetails: Record<string, { name: string; campus: string }[]> = {}
 
@@ -64,7 +63,6 @@ export default async function StatsPage() {
     }
   }
 
-  // ── Per campus breakdown ──────────────────────────────────────────────────
   interface CampusStats {
     id: string
     name: string
@@ -96,7 +94,6 @@ export default async function StatsPage() {
     for (const d of req.dates) stats.monthCounts[getMonth(d)]++
   }
 
-  // Count unique professors per campus from approved requests
   const campusProfSet = new Map<string, Set<string>>()
   for (const req of approvedRequests) {
     if (!req.professor.campusId) continue
@@ -109,7 +106,6 @@ export default async function StatsPage() {
     stats.totalProfessors = campusProfSet.get(cid)?.size ?? 0
   })
 
-  // ── Overlap calculation ────────────────────────────────────────────────────
   interface OverlapEntry {
     date: string
     campusId: string
@@ -150,7 +146,6 @@ export default async function StatsPage() {
   })
   overlapAlerts.sort((a, b) => a.date.localeCompare(b.date))
 
-  // Add overlap count to campus stats
   overlapAlerts.forEach((o) => {
     const stats = campusMap.get(o.campusId)
     if (stats) stats.overlapDays++
@@ -168,7 +163,6 @@ export default async function StatsPage() {
         <p className="text-muted-foreground">Academic year {label} · Approved leave analysis</p>
       </div>
 
-      {/* Summary metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Card className="p-5 flex items-center gap-4">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 shrink-0">
@@ -226,7 +220,6 @@ export default async function StatsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* 1. Heatmap */}
         <TabsContent value="heatmap">
           <Card>
             <CardHeader>
@@ -241,7 +234,6 @@ export default async function StatsPage() {
           </Card>
         </TabsContent>
 
-        {/* 2. By campus */}
         <TabsContent value="campus">
           <Card>
             <CardHeader>
@@ -292,7 +284,6 @@ export default async function StatsPage() {
           </Card>
         </TabsContent>
 
-        {/* 3. By professor */}
         <TabsContent value="professors">
           <Card>
             <CardHeader>
@@ -309,7 +300,6 @@ export default async function StatsPage() {
           </Card>
         </TabsContent>
 
-        {/* 4. Overlaps */}
         <TabsContent value="overlaps">
           <Card>
             <CardHeader>

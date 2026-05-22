@@ -33,7 +33,6 @@ export function SubmissionsFilter({ campuses }: { campuses: Campus[] }) {
     router.push(`/admin/submissions?${next.toString()}`)
   }
 
-  // Debounce search → URL
   useEffect(() => {
     const timer = setTimeout(() => update("search", search), 300)
     return () => clearTimeout(timer)

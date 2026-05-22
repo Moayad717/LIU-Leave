@@ -20,16 +20,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
-      // TODO: re-enable for production
-      // if (!user.email?.endsWith("@liu.edu.lb")) {
-      //   return "/auth/error?error=DomainRestricted"
-      // }
+    async signIn() {
       return true
     },
 
     async jwt({ token, user, trigger }) {
-      // On first sign-in, hydrate token from DB user
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
@@ -43,7 +38,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // Refresh stale token data (every 15 min) or when explicitly updated
       const shouldRefresh =
         trigger === "update" ||
         !token.lastRefreshed ||
@@ -74,7 +68,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   events: {
     async createUser({ user }) {
-      // Auto-promote bootstrap admin on first login
       if (
         process.env.ADMIN_BOOTSTRAP_EMAIL &&
         user.email === process.env.ADMIN_BOOTSTRAP_EMAIL
