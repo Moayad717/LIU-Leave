@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Blue rounded background -->
+  <rect width="512" height="512" rx="112" fill="#4776e6"/>
+
+  <!-- Graduation cap: brim (diamond/rhombus) -->
+  <polygon points="256,130 420,215 256,295 92,215" fill="white"/>
+
+  <!-- Cap top square (mortarboard) -->
+  <rect x="216" y="126" width="80" height="80" rx="6" fill="white" transform="rotate(45 256 166)"/>
+
+  <!-- Body / hanging part -->
+  <path d="M150 232 L150 310 Q150 350 256 370 Q362 350 362 310 L362 232 L256 280 Z" fill="white" opacity="0.92"/>
+
+  <!-- Tassel string -->
+  <line x1="420" y1="215" x2="420" y2="318" stroke="white" stroke-width="14" stroke-linecap="round"/>
+  <!-- Tassel ball -->
+  <circle cx="420" cy="330" r="16" fill="white"/>
+</svg>

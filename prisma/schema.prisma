@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  PROFESSOR
+  ADMIN
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(PROFESSOR)
+  campusId      String?
+  campus        Campus?   @relation(fields: [campusId], references: [id])
+  createdAt     DateTime  @default(now())
+
+  accounts       Account[]
+  leaveRequests  LeaveRequest[] @relation("ProfessorLeaves")
+  reviewedLeaves LeaveRequest[] @relation("ReviewedLeaves")
+
+  @@index([campusId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Campus {
+  id    String @id @default(cuid())
+  name  String @unique
+  users User[]
+}
+
+model AppSettings {
+  id              String   @id @default("global")
+  submissionsOpen Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+model Holiday {
+  id        String   @id @default(cuid())
+  date      DateTime
+  label     String?
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+model LeaveRequest {
+  id           String      @id @default(cuid())
+  professorId  String
+  professor    User        @relation("ProfessorLeaves", fields: [professorId], references: [id], onDelete: Cascade)
+  dates        DateTime[]
+  status       LeaveStatus @default(PENDING)
+  adminComment String?     @db.Text
+  submittedAt  DateTime    @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?       @relation("ReviewedLeaves", fields: [reviewedById], references: [id])
+
+  @@index([professorId])
+  @@index([status])
+  @@index([submittedAt])
+}
