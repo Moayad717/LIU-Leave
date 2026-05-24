@@ -25,6 +25,7 @@ interface UserRow {
   role: Role
   createdAt: Date
   campus: { name: string } | null
+  department: { name: string } | null
 }
 
 interface Props {
@@ -41,7 +42,8 @@ export function UsersTable({ users, currentUserId }: Props) {
         return (
           u.name?.toLowerCase().includes(q) ||
           u.email?.toLowerCase().includes(q) ||
-          u.campus?.name.toLowerCase().includes(q)
+          u.campus?.name.toLowerCase().includes(q) ||
+          u.department?.name.toLowerCase().includes(q)
         )
       })
     : users
@@ -51,7 +53,7 @@ export function UsersTable({ users, currentUserId }: Props) {
       <div className="relative px-6 pt-2">
         <Search className="absolute left-9 top-4.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name, email or campus..."
+          placeholder="Search by name, email, campus or department..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-8 max-w-sm"
@@ -68,6 +70,7 @@ export function UsersTable({ users, currentUserId }: Props) {
             <TableRow>
               <TableHead>User</TableHead>
               <TableHead>Campus</TableHead>
+              <TableHead>Department</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -100,6 +103,7 @@ export function UsersTable({ users, currentUserId }: Props) {
                     </div>
                   </TableCell>
                   <TableCell>{user.campus?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>{user.department?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>
                     <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
                       {user.role === "ADMIN" ? "Admin" : "Professor"}

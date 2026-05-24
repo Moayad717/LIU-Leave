@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { toggleSubmissions, addHoliday, removeHoliday } from "@/actions/settings"
+import { Switch } from "@/components/ui/switch"
+import { toggleSubmissions, addHoliday, removeHoliday, updateSettings } from "@/actions/settings"
 import { toast } from "sonner"
-import { CalendarOff, Lock, Unlock, Trash2, Plus } from "lucide-react"
+import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal } from "lucide-react"
 
 interface Holiday {
   id: string
@@ -20,13 +21,28 @@ interface Holiday {
 interface Props {
   submissionsOpen: boolean
   holidays: Holiday[]
+  maxLeaveDays: number
+  campusOverlapThreshold: number
+  deptOverlapEnabled: boolean
+  deptOverlapThreshold: number
 }
 
-export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialHolidays }: Props) {
+export function SettingsPanel({
+  submissionsOpen: initialOpen,
+  holidays: initialHolidays,
+  maxLeaveDays: initialMaxDays,
+  campusOverlapThreshold: initialCampusThreshold,
+  deptOverlapEnabled: initialDeptEnabled,
+  deptOverlapThreshold: initialDeptThreshold,
+}: Props) {
   const [open, setOpen] = useState(initialOpen)
   const [holidays, setHolidays] = useState(initialHolidays)
   const [date, setDate] = useState("")
   const [label, setLabel] = useState("")
+  const [maxDays, setMaxDays] = useState(String(initialMaxDays))
+  const [campusThreshold, setCampusThreshold] = useState(String(initialCampusThreshold))
+  const [deptEnabled, setDeptEnabled] = useState(initialDeptEnabled)
+  const [deptThreshold, setDeptThreshold] = useState(String(initialDeptThreshold))
   const [isPending, startTransition] = useTransition()
 
   const handleToggle = () => {
@@ -60,6 +76,35 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
     })
   }
 
+  const handleSaveThresholds = () => {
+    const parsedMaxDays = parseInt(maxDays)
+    const parsedCampus = parseInt(campusThreshold)
+    const parsedDept = parseInt(deptThreshold)
+
+    if (isNaN(parsedMaxDays) || parsedMaxDays < 1 || parsedMaxDays > 60) {
+      toast.error("Max leave days must be between 1 and 60.")
+      return
+    }
+    if (isNaN(parsedCampus) || parsedCampus < 2 || parsedCampus > 20) {
+      toast.error("Campus overlap threshold must be between 2 and 20.")
+      return
+    }
+    if (isNaN(parsedDept) || parsedDept < 2 || parsedDept > 20) {
+      toast.error("Department overlap threshold must be between 2 and 20.")
+      return
+    }
+
+    startTransition(async () => {
+      const result = await updateSettings({
+        maxLeaveDays: parsedMaxDays,
+        campusOverlapThreshold: parsedCampus,
+        deptOverlapEnabled: deptEnabled,
+        deptOverlapThreshold: parsedDept,
+      })
+      if (result?.success) toast.success("Settings saved.")
+    })
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -68,9 +113,6 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
             {open ? <Unlock className="w-4 h-4 text-green-600" /> : <Lock className="w-4 h-4 text-red-500" />}
             Submissions
           </CardTitle>
-          <CardDescription>
-            When closed, professors cannot submit new leave requests.
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -98,12 +140,77 @@ export function SettingsPanel({ submissionsOpen: initialOpen, holidays: initialH
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-blue-500" />
+            Thresholds &amp; Limits
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="max-days">Max Leave Days per Professor</Label>
+              <Input
+                id="max-days"
+                type="number"
+                min={1}
+                max={60}
+                value={maxDays}
+                onChange={(e) => setMaxDays(e.target.value)}
+                disabled={isPending}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="campus-threshold">Campus Overlap Alert (≥)</Label>
+              <Input
+                id="campus-threshold"
+                type="number"
+                min={2}
+                max={20}
+                value={campusThreshold}
+                onChange={(e) => setCampusThreshold(e.target.value)}
+                disabled={isPending}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="dept-threshold">Dept. Overlap Alert (≥)</Label>
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    id="dept-overlap-toggle"
+                    checked={deptEnabled}
+                    onCheckedChange={setDeptEnabled}
+                    disabled={isPending}
+                  />
+                  <span className="text-xs text-muted-foreground">{deptEnabled ? "On" : "Off"}</span>
+                </div>
+              </div>
+              <Input
+                id="dept-threshold"
+                type="number"
+                min={2}
+                max={20}
+                value={deptThreshold}
+                onChange={(e) => setDeptThreshold(e.target.value)}
+                disabled={isPending || !deptEnabled}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveThresholds} disabled={isPending} size="sm">
+              Save Settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
             <CalendarOff className="w-4 h-4 text-amber-500" />
             Holidays
           </CardTitle>
-          <CardDescription>
-            Professors cannot select these dates when submitting leave requests.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="flex flex-wrap gap-3 items-end rounded-lg border bg-muted/30 p-4">

@@ -9,6 +9,10 @@ async function requireAdmin() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Not authenticated.")
   if (session.user.role !== "ADMIN") throw new Error("Admin access required.")
+
+  const user = await db.user.findUnique({ where: { id: session.user.id } })
+  if (!user) throw new Error("Session is stale — please sign out and sign back in.")
+
   return session
 }
 
@@ -39,6 +43,7 @@ export async function reviewLeaveRequest(
     },
   })
 
+  revalidatePath("/admin")
   revalidatePath("/admin/submissions")
   revalidatePath(`/admin/submissions/${requestId}`)
   revalidatePath("/admin/stats")

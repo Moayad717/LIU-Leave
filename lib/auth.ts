@@ -20,8 +20,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn() {
-      return true
+    async signIn({ user }) {
+      return user.email?.endsWith("@liu.edu.lb") ?? false
     },
 
     async jwt({ token, user, trigger }) {

@@ -4,15 +4,15 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { getCurrentAcademicYear } from "@/lib/academic-year"
 
-const MAX_DAYS = 22
-
 export async function submitLeaveRequest(dates: string[]) {
   const session = await auth()
   if (!session?.user?.id) return { error: "Not authenticated." }
-  if (session.user.role !== "PROFESSOR") return { error: "Only professors can submit leave requests." }
+
+  const appSettings = await db.appSettings.findUnique({ where: { id: "global" } })
+  const maxDays = appSettings?.maxLeaveDays ?? 22
 
   if (!dates.length) return { error: "Please select at least one date." }
-  if (dates.length > MAX_DAYS) return { error: `Maximum ${MAX_DAYS} days allowed.` }
+  if (dates.length > maxDays) return { error: `Maximum ${maxDays} days allowed.` }
 
   const { start, end } = getCurrentAcademicYear()
 

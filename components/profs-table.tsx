@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { Search } from "lucide-react"
+import { Search, ChevronDown, ChevronUp } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -23,11 +23,13 @@ interface RequestRow {
     name: string | null
     email: string
     campus: { name: string } | null
+    department: { name: string } | null
   }
 }
 
 export function ProfsTable({ requests }: { requests: RequestRow[] }) {
   const [search, setSearch] = useState("")
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const filtered = search.trim()
     ? requests.filter((r) => {
@@ -35,7 +37,8 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
         return (
           r.professor.name?.toLowerCase().includes(q) ||
           r.professor.email.toLowerCase().includes(q) ||
-          r.professor.campus?.name.toLowerCase().includes(q)
+          r.professor.campus?.name.toLowerCase().includes(q) ||
+          r.professor.department?.name.toLowerCase().includes(q)
         )
       })
     : requests
@@ -62,27 +65,68 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
             <TableRow>
               <TableHead>Professor</TableHead>
               <TableHead>Campus</TableHead>
+              <TableHead>Department</TableHead>
               <TableHead>Days</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
+              <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((req) => (
-              <TableRow key={req.id}>
-                <TableCell className="font-medium">
-                  {req.professor.name ?? req.professor.email}
-                </TableCell>
-                <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
-                <TableCell>{req.dates.length}</TableCell>
-                <TableCell>
-                  <StatusBadge status={req.status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {format(req.submittedAt, "MMM d, yyyy")}
-                </TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((req) => {
+              const isOpen = expandedId === req.id
+              const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
+
+              return (
+                <>
+                  <TableRow
+                    key={req.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setExpandedId(isOpen ? null : req.id)}
+                  >
+                    <TableCell className="font-medium">
+                      {req.professor.name ?? req.professor.email}
+                    </TableCell>
+                    <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
+                    <TableCell>{req.professor.department?.name ?? "—"}</TableCell>
+                    <TableCell>{req.dates.length}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={req.status} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {format(req.submittedAt, "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {isOpen
+                        ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      }
+                    </TableCell>
+                  </TableRow>
+
+                  {isOpen && (
+                    <TableRow key={`${req.id}-dates`} className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={7} className="py-3 px-6">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                          Selected dates ({sortedDates.length})
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sortedDates.map((date) => (
+                            <Badge
+                              key={date.toISOString()}
+                              variant="secondary"
+                              className="text-xs font-normal"
+                            >
+                              {format(date, "EEE, MMM d, yyyy")}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )
+            })}
           </TableBody>
         </Table>
       )}

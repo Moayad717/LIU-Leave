@@ -27,6 +27,10 @@ export default async function SettingsPage() {
       <SettingsPanel
         submissionsOpen={settings?.submissionsOpen ?? true}
         holidays={holidays}
+        maxLeaveDays={settings?.maxLeaveDays ?? 22}
+        campusOverlapThreshold={settings?.campusOverlapThreshold ?? 3}
+        deptOverlapEnabled={settings?.deptOverlapEnabled ?? true}
+        deptOverlapThreshold={settings?.deptOverlapThreshold ?? 2}
       />
     </div>
   )

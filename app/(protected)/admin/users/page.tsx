@@ -10,7 +10,7 @@ export default async function UsersPage() {
   if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
 
   const users = await db.user.findMany({
-    include: { campus: true },
+    include: { campus: true, department: true },
     orderBy: [{ role: "asc" }, { createdAt: "asc" }],
   })
 

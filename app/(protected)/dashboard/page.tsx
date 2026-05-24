@@ -8,15 +8,25 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { DateMultiPickerClient } from "@/components/date-multi-picker-client"
-import { AdminDashboard } from "@/components/admin-dashboard-redirect"
-import { CalendarDays, CheckCircle2, Clock, XCircle, MessageSquare, Info, Lock } from "lucide-react"
+import { AdminRolePicker } from "@/components/admin-role-picker"
+import Link from "next/link"
+import { CalendarDays, CheckCircle2, Clock, XCircle, MessageSquare, Info, Lock, LayoutDashboard } from "lucide-react"
 
-export default async function DashboardPage() {
+interface Props {
+  searchParams: { as?: string }
+}
+
+export default async function DashboardPage({ searchParams }: Props) {
   const session = await auth()
   if (!session) redirect("/auth/signin")
 
-  if (session.user.role === "ADMIN") {
-    return <AdminDashboard />
+  const isAdmin = session.user.role === "ADMIN"
+  const viewingAsProfessor = searchParams.as === "professor"
+
+  if (isAdmin && !viewingAsProfessor) {
+    return (
+      <AdminRolePicker name={session.user.name?.split(" ")[0] ?? "Admin"} />
+    )
   }
 
   const { start, end, label } = getCurrentAcademicYear()
@@ -31,7 +41,7 @@ export default async function DashboardPage() {
     }),
     db.user.findUnique({
       where: { id: session.user.id },
-      include: { campus: true },
+      include: { campus: true, department: true },
     }),
     db.appSettings.findUnique({ where: { id: "global" } }),
     db.holiday.findMany({
@@ -41,6 +51,7 @@ export default async function DashboardPage() {
   ])
 
   const submissionsOpen = appSettings?.submissionsOpen ?? true
+  const maxLeaveDays = appSettings?.maxLeaveDays ?? 22
   const holidayISOs = holidays.map((h) => ({ iso: h.date.toISOString(), label: h.label }))
 
   const sortedDates = leaveRequest
@@ -49,12 +60,25 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {isAdmin && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+          <p className="text-sm text-amber-700 font-medium">Viewing as professor</p>
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-800 font-medium transition-colors"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            Back to Admin Panel
+          </Link>
+        </div>
+      )}
+
       <div className="rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 px-6 py-5">
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome back, {session.user.name?.split(" ")[0] ?? "Professor"}
         </h1>
         <p className="text-muted-foreground mt-0.5">
-          Academic year {label} · {user?.campus?.name ?? "No campus"} campus
+          Academic year {label} · {user?.campus?.name ?? "No campus"} · {user?.department?.name ?? "No department"}
         </p>
       </div>
 
@@ -130,6 +154,7 @@ export default async function DashboardPage() {
                     startISO={start.toISOString()}
                     endISO={end.toISOString()}
                     holidays={holidayISOs}
+                    maxDays={maxLeaveDays}
                   />
                 ) : (
                   <Alert>

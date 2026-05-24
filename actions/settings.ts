@@ -41,3 +41,23 @@ export async function removeHoliday(id: string) {
   revalidatePath("/dashboard")
   return { success: true }
 }
+
+export async function updateSettings(data: {
+  maxLeaveDays?: number
+  campusOverlapThreshold?: number
+  deptOverlapEnabled?: boolean
+  deptOverlapThreshold?: number
+}) {
+  await requireAdmin()
+
+  await db.appSettings.upsert({
+    where: { id: "global" },
+    update: data,
+    create: { id: "global", ...data },
+  })
+
+  revalidatePath("/admin/settings")
+  revalidatePath("/admin/stats")
+  revalidatePath("/dashboard")
+  return { success: true }
+}

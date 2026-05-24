@@ -31,7 +31,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
   const req = await db.leaveRequest.findUnique({
     where: { id: params.id },
     include: {
-      professor: { include: { campus: true } },
+      professor: { include: { campus: true, department: true } },
       reviewedBy: { select: { name: true, email: true } },
     },
   })
@@ -65,6 +65,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
         <CardContent className="space-y-3">
           <InfoRow icon={User} label="Professor" value={req.professor.name ?? req.professor.email} />
           <InfoRow icon={Building} label="Campus" value={req.professor.campus?.name ?? "—"} />
+          <InfoRow icon={Building} label="Department" value={req.professor.department?.name ?? "—"} />
           <InfoRow icon={CalendarDays} label="Days requested" value={String(req.dates.length)} />
           <InfoRow icon={Clock} label="Submitted" value={format(req.submittedAt, "MMMM d, yyyy 'at' h:mm a")} />
           {req.reviewedAt && (

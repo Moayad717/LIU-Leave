@@ -17,7 +17,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SubmissionsFilter } from "@/components/submissions-filter"
+import { QuickApproveButton } from "@/components/quick-approve-button"
 import { ChevronRight, ClipboardList, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 import type { LeaveStatus } from "@/types/enums"
 
 interface SubmissionRow {
@@ -29,16 +31,21 @@ interface SubmissionRow {
     name: string | null
     email: string
     campus: { name: string } | null
+    department: { name: string } | null
   }
 }
 
 interface Props {
-  searchParams: { campus?: string; status?: string; search?: string }
+  searchParams: { campus?: string; status?: string; search?: string; year?: string }
 }
 
 export default async function SubmissionsPage({ searchParams }: Props) {
   const session = await auth()
   if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+
+  const currentYear = getCurrentAcademicYear()
+  const selectedStartYear = searchParams.year ? parseInt(searchParams.year) : currentYear.start.getFullYear()
+  const { start, end } = getAcademicYearFromStartYear(selectedStartYear)
 
   const professorWhere: Record<string, unknown> = {}
   if (searchParams.campus) professorWhere.campusId = searchParams.campus
@@ -49,19 +56,34 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     ]
   }
 
-  const [campuses, requests] = await Promise.all([
+  const [campuses, requests, earliest] = await Promise.all([
     db.campus.findMany({ orderBy: { name: "asc" } }),
     db.leaveRequest.findMany({
-    where: {
-      ...(Object.keys(professorWhere).length > 0 ? { professor: professorWhere } : {}),
-      ...(searchParams.status ? { status: searchParams.status as LeaveStatus } : {}),
-    },
-    include: {
-      professor: { include: { campus: true } },
-    },
-    orderBy: { submittedAt: "desc" },
-  }),
+      where: {
+        submittedAt: { gte: start, lte: end },
+        ...(Object.keys(professorWhere).length > 0 ? { professor: professorWhere } : {}),
+        ...(searchParams.status ? { status: searchParams.status as LeaveStatus } : {}),
+      },
+      include: {
+        professor: { include: { campus: true, department: true } },
+      },
+      orderBy: { submittedAt: "desc" },
+    }),
+    db.leaveRequest.findFirst({ orderBy: { submittedAt: "asc" }, select: { submittedAt: true } }),
   ])
+
+  const earliestYear = earliest
+    ? getAcademicYearFromStartYear(
+        earliest.submittedAt.getMonth() >= 8
+          ? earliest.submittedAt.getFullYear()
+          : earliest.submittedAt.getFullYear() - 1
+      ).start.getFullYear()
+    : currentYear.start.getFullYear()
+
+  const availableYears: number[] = []
+  for (let y = earliestYear; y <= currentYear.start.getFullYear(); y++) {
+    availableYears.push(y)
+  }
 
   const counts = {
     total: requests.length,
@@ -74,7 +96,6 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Submissions</h1>
-        <p className="text-muted-foreground">Review and process professor leave requests.</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -96,8 +117,12 @@ export default async function SubmissionsPage({ searchParams }: Props) {
         ))}
       </div>
 
-      <Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-44" /><Skeleton className="h-10 w-36" /></div>}>
-        <SubmissionsFilter campuses={campuses} />
+      <Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-36" /><Skeleton className="h-10 w-52" /><Skeleton className="h-10 w-44" /><Skeleton className="h-10 w-36" /></div>}>
+        <SubmissionsFilter
+          campuses={campuses}
+          availableYears={availableYears}
+          currentStartYear={currentYear.start.getFullYear()}
+        />
       </Suspense>
 
       <Card>
@@ -120,6 +145,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
                 <TableRow>
                   <TableHead>Professor</TableHead>
                   <TableHead>Campus</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Days</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Status</TableHead>
@@ -133,6 +159,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
                       {req.professor.name ?? req.professor.email}
                     </TableCell>
                     <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
+                    <TableCell>{req.professor.department?.name ?? "—"}</TableCell>
                     <TableCell>{req.dates.length}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {format(req.submittedAt, "MMM d, yyyy")}
@@ -141,11 +168,16 @@ export default async function SubmissionsPage({ searchParams }: Props) {
                       <StatusBadge status={req.status} />
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/admin/submissions/${req.id}`}>
-                          <ChevronRight className="w-4 h-4" />
-                        </Link>
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        {req.status === "PENDING" && (
+                          <QuickApproveButton requestId={req.id} />
+                        )}
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/admin/submissions/${req.id}`}>
+                            <ChevronRight className="w-4 h-4" />
+                          </Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

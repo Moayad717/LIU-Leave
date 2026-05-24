@@ -18,12 +18,19 @@ interface Campus {
   name: string
 }
 
-export function SubmissionsFilter({ campuses }: { campuses: Campus[] }) {
+interface Props {
+  campuses: Campus[]
+  availableYears: number[]
+  currentStartYear: number
+}
+
+export function SubmissionsFilter({ campuses, availableYears, currentStartYear }: Props) {
   const router = useRouter()
   const params = useSearchParams()
 
   const campus = params.get("campus") ?? ""
   const status = params.get("status") ?? ""
+  const year = params.get("year") ?? String(currentStartYear)
   const [search, setSearch] = useState(params.get("search") ?? "")
 
   const update = (key: string, value: string) => {
@@ -40,12 +47,26 @@ export function SubmissionsFilter({ campuses }: { campuses: Campus[] }) {
 
   const clear = () => {
     setSearch("")
-    router.push("/admin/submissions")
+    router.push(`/admin/submissions?year=${currentStartYear}`)
   }
-  const hasFilters = !!campus || !!status || !!search
+
+  const hasFilters = !!campus || !!status || !!search || year !== String(currentStartYear)
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <Select value={year} onValueChange={(v) => update("year", v)}>
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {availableYears.map((y) => (
+            <SelectItem key={y} value={String(y)}>
+              {y}–{y + 1}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input

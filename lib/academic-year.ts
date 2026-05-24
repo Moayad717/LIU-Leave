@@ -18,6 +18,14 @@ export function getCurrentAcademicYear(): AcademicYear {
   }
 }
 
+export function getAcademicYearFromStartYear(startYear: number): AcademicYear {
+  return {
+    start: new Date(startYear, 8, 1, 0, 0, 0),
+    end: new Date(startYear + 1, 7, 31, 23, 59, 59),
+    label: `${startYear}–${startYear + 1}`,
+  }
+}
+
 export function getAcademicYearForDate(date: Date): AcademicYear {
   const year = date.getFullYear()
   const month = date.getMonth()

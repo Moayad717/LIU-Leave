@@ -12,10 +12,12 @@ export function DateMultiPickerClient({
   startISO,
   endISO,
   holidays = [],
+  maxDays,
 }: {
   startISO: string
   endISO: string
   holidays?: Holiday[]
+  maxDays?: number
 }) {
   const router = useRouter()
 
@@ -25,6 +27,7 @@ export function DateMultiPickerClient({
       academicYearEnd={new Date(endISO)}
       holidays={holidays}
       onSuccess={() => router.refresh()}
+      maxDays={maxDays}
     />
   )
 }

@@ -12,8 +12,6 @@ import { submitLeaveRequest } from "@/actions/leave"
 import { toast } from "sonner"
 import "react-day-picker/dist/style.css"
 
-const MAX_DAYS = 22
-
 interface Holiday {
   iso: string
   label: string | null
@@ -24,11 +22,13 @@ interface Props {
   academicYearEnd: Date
   holidays?: Holiday[]
   onSuccess: () => void
+  maxDays?: number
 }
 
 const DRAFT_KEY = "liu-leave-draft"
 
-export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays = [], onSuccess }: Props) {
+export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays = [], onSuccess, maxDays = 22 }: Props) {
+  const MAX_DAYS = maxDays
   const [selected, setSelected] = useState<Date[]>([])
   const [isPending, startTransition] = useTransition()
   const [justSaved, setJustSaved] = useState(false)

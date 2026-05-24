@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { GraduationCap, LayoutDashboard, ClipboardList, BarChart3, Users, Settings, LogOut, ChevronDown } from "lucide-react"
+import { GraduationCap, LayoutDashboard, ClipboardList, BarChart3, Users, Settings, LogOut, ChevronDown, UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -108,6 +108,13 @@ export function Nav({ user }: { user: NavUser }) {
                 </DropdownMenuItem>
               ))}
 
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+                  <UserCircle className="w-4 h-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive cursor-pointer"
