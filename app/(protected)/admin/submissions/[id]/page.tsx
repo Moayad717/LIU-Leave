@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ReviewForm } from "@/components/review-form"
+import { ConflictPanel } from "@/components/conflict-panel"
+import type { DateConflict } from "@/components/conflict-panel"
 import {
   ArrowLeft,
   CalendarDays,
@@ -18,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
+  ShieldAlert,
 } from "lucide-react"
 
 interface Props {
@@ -28,15 +31,66 @@ export default async function SubmissionDetailPage({ params }: Props) {
   const session = await auth()
   if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
 
-  const req = await db.leaveRequest.findUnique({
-    where: { id: params.id },
-    include: {
-      professor: { include: { campus: true, department: true } },
-      reviewedBy: { select: { name: true, email: true } },
-    },
-  })
+  const [req, appSettings] = await Promise.all([
+    db.leaveRequest.findUnique({
+      where: { id: params.id },
+      include: {
+        professor: { include: { campus: true, department: true } },
+        reviewedBy: { select: { name: true, email: true } },
+      },
+    }),
+    db.appSettings.findUnique({ where: { id: "global" } }),
+  ])
 
   if (!req) notFound()
+
+  const campusThreshold = appSettings?.campusOverlapThreshold ?? 3
+  const deptThreshold = appSettings?.deptOverlapThreshold ?? 2
+  const deptEnabled = appSettings?.deptOverlapEnabled ?? true
+
+  // Fetch all other approved requests on the same campus to compute conflicts
+  const conflicts: DateConflict[] = []
+  if (req.professor.campusId) {
+    const campusApproved = await db.leaveRequest.findMany({
+      where: {
+        status: "APPROVED",
+        id: { not: req.id },
+        professor: { campusId: req.professor.campusId },
+      },
+      include: {
+        professor: { select: { name: true, email: true, departmentId: true } },
+      },
+    })
+
+    const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
+
+    for (const date of sortedDates) {
+      const key = format(date, "yyyy-MM-dd")
+      const campusAbsent: string[] = []
+      const deptAbsent: string[] = []
+
+      for (const other of campusApproved) {
+        const isAbsent = other.dates.some((d) => format(d, "yyyy-MM-dd") === key)
+        if (!isAbsent) continue
+        const name = other.professor.name ?? other.professor.email
+        campusAbsent.push(name)
+        if (
+          req.professor.departmentId &&
+          other.professor.departmentId === req.professor.departmentId
+        ) {
+          deptAbsent.push(name)
+        }
+      }
+
+      conflicts.push({
+        date: key,
+        campusAbsent,
+        deptAbsent,
+        campusAlert: campusAbsent.length + 1 >= campusThreshold,
+        deptAlert: deptAbsent.length + 1 >= deptThreshold,
+      })
+    }
+  }
 
   const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
   const isPending = req.status === "PENDING"
@@ -101,6 +155,30 @@ export default async function SubmissionDetailPage({ params }: Props) {
           </div>
         </CardContent>
       </Card>
+
+      {req.professor.campusId && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-500" />
+              Conflict Analysis
+            </CardTitle>
+            <CardDescription>
+              Impact of approving these dates on {req.professor.campus?.name} campus
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ConflictPanel
+              conflicts={conflicts}
+              campusThreshold={campusThreshold}
+              deptThreshold={deptThreshold}
+              deptEnabled={deptEnabled}
+              campusName={req.professor.campus?.name ?? "campus"}
+              deptName={req.professor.department?.name ?? "department"}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {isPending && (
         <>
