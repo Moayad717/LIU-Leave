@@ -147,18 +147,16 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
           disabled={[
             { before: academicYearStart },
             { after: academicYearEnd },
+            { dayOfWeek: [0, 6] },
             ...holidayDates,
             ...(remaining === 0
               ? [(date: Date) => !selected.some((d) => isSameDay(d, date))]
               : []),
           ]}
-          modifiers={{ holiday: holidayDates }}
+          modifiers={{ holiday: holidayDates, weekend: { dayOfWeek: [0, 6] } }}
           modifiersStyles={{
-            holiday: {
-              color: "#d97706",
-              textDecoration: "line-through",
-              opacity: 0.7,
-            },
+            holiday: { color: "#d97706", textDecoration: "line-through", opacity: 0.7 },
+            weekend: { opacity: 0.25 },
           }}
           numberOfMonths={2}
           pagedNavigation
@@ -168,13 +166,13 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
             IconRight: () => <ChevronRight className="h-4 w-4" />,
           }}
           classNames={{
-            months: "flex flex-wrap gap-6 justify-center",
+            months: "flex flex-wrap gap-8 justify-center",
             month: "space-y-3",
-            caption: "flex justify-center pt-1 relative items-center",
-            caption_label: "text-sm font-semibold",
+            caption: "flex justify-center pt-1 relative items-center mb-2",
+            caption_label: "text-base font-semibold",
             nav: "space-x-1 flex items-center",
             nav_button: cn(
-              "h-7 w-7 bg-transparent p-0 border border-input rounded-md",
+              "h-8 w-8 bg-transparent p-0 border border-input rounded-md",
               "hover:bg-accent hover:text-accent-foreground",
               "inline-flex items-center justify-center"
             ),
@@ -182,19 +180,19 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
             nav_button_next: "absolute right-1",
             table: "w-full border-collapse",
             head_row: "flex",
-            head_cell: "text-muted-foreground rounded-md w-9 font-normal text-xs text-center py-1",
+            head_cell: "text-muted-foreground rounded-md w-11 font-medium text-xs text-center py-1.5",
             row: "flex w-full mt-1",
-            cell: "h-9 w-9 text-center text-sm p-0 relative",
+            cell: "h-11 w-11 text-center text-sm p-0 relative",
             day: cn(
-              "h-9 w-9 p-0 font-normal rounded-md",
+              "h-11 w-11 p-0 font-normal rounded-lg text-sm",
               "hover:bg-accent hover:text-accent-foreground",
-              "inline-flex items-center justify-center",
+              "inline-flex items-center justify-center transition-colors",
               "aria-selected:opacity-100"
             ),
-            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-            day_today: "bg-accent/60 font-semibold",
+            day_selected: "bg-blue-600 text-white hover:bg-blue-700 font-bold shadow-md ring-2 ring-blue-300",
+            day_today: "ring-2 ring-primary/40 font-semibold",
             day_outside: "invisible",
-            day_disabled: "text-muted-foreground opacity-30 cursor-not-allowed",
+            day_disabled: "text-muted-foreground opacity-25 cursor-not-allowed",
           }}
         />
       </div>

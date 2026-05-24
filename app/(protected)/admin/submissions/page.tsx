@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table"
 import { SubmissionsFilter } from "@/components/submissions-filter"
 import { QuickApproveButton } from "@/components/quick-approve-button"
-import { ChevronRight, ClipboardList, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { ChevronRight, ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 import type { LeaveStatus } from "@/types/enums"
 
@@ -94,8 +94,14 @@ export default async function SubmissionsPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Submissions</h1>
+        <Button variant="outline" size="sm" className="gap-1.5" asChild>
+          <a href="/api/admin/export" download>
+            <Download className="w-4 h-4" />
+            Export to Excel
+          </a>
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

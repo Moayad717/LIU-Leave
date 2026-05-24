@@ -11,6 +11,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ReviewForm } from "@/components/review-form"
 import { ConflictPanel } from "@/components/conflict-panel"
 import type { DateConflict } from "@/components/conflict-panel"
+import { SubmittedCalendar } from "@/components/submitted-calendar"
+import { PrintButton } from "@/components/print-button"
 import {
   ArrowLeft,
   CalendarDays,
@@ -97,16 +99,24 @@ export default async function SubmissionDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/submissions">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-xl font-bold">Leave Request</h1>
-          <p className="text-sm text-muted-foreground">ID: {req.id}</p>
+      <div className="flex items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/admin/submissions">
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold">Leave Request</h1>
+            <p className="text-sm text-muted-foreground">ID: {req.id}</p>
+          </div>
         </div>
+        <PrintButton />
+      </div>
+
+      <div className="hidden print:block mb-6">
+        <h1 className="text-2xl font-bold">LIU Leave — Leave Request</h1>
+        <p className="text-sm text-muted-foreground">ID: {req.id}</p>
       </div>
 
       <Card>
@@ -145,7 +155,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
           <CardTitle className="text-base">Selected Dates</CardTitle>
           <CardDescription>{sortedDates.length} day{sortedDates.length !== 1 ? "s" : ""}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <div className="flex flex-wrap gap-2">
             {sortedDates.map((date) => (
               <Badge key={date.toISOString()} variant="secondary" className="text-xs font-normal">
@@ -153,6 +163,8 @@ export default async function SubmissionDetailPage({ params }: Props) {
               </Badge>
             ))}
           </div>
+          <Separator />
+          <SubmittedCalendar dates={sortedDates.map((d) => d.toISOString())} />
         </CardContent>
       </Card>
 

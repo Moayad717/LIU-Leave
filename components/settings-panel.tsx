@@ -8,9 +8,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { toggleSubmissions, addHoliday, removeHoliday, updateSettings } from "@/actions/settings"
+import { toggleSubmissions, addHoliday, removeHoliday, updateSettings, resetDatabase } from "@/actions/settings"
 import { toast } from "sonner"
-import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal } from "lucide-react"
+import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal, AlertTriangle } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 interface Holiday {
   id: string
@@ -279,6 +288,53 @@ export function SettingsPanel({
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2 text-destructive">
+            <AlertTriangle className="w-4 h-4" />
+            Danger Zone
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Reset Database</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Permanently deletes all users and leave requests. Campuses, departments, and settings are kept.
+            </p>
+          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={isPending}>
+                Reset Database
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Are you absolutely sure?</DialogTitle>
+                <DialogDescription>
+                  This will permanently delete all users and leave requests. This action cannot be undone.
+                  Campuses, departments, and app settings will not be affected.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="destructive"
+                  disabled={isPending}
+                  onClick={() => {
+                    startTransition(async () => {
+                      await resetDatabase()
+                      toast.success("Database reset. All users and leave requests deleted.")
+                    })
+                  }}
+                >
+                  Yes, reset everything
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>

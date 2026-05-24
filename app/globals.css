@@ -78,10 +78,53 @@
 
 /* react-day-picker overrides */
 .rdp-day_selected:not([disabled]) {
-  background-color: hsl(var(--primary)) !important;
-  color: hsl(var(--primary-foreground)) !important;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
 }
 .rdp-day_selected:hover:not([disabled]) {
-  background-color: hsl(var(--primary)) !important;
-  opacity: 0.9;
+  background-color: #1d4ed8 !important;
+}
+
+/* ── Print styles ─────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide chrome */
+  nav,
+  header,
+  [data-print="hide"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Full-width content */
+  main, body, html {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Cards print cleanly without shadows */
+  .card, [class*="rounded"] {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  /* Keep selected calendar days visible when printing */
+  .rdp-day_selected {
+    background-color: #1d4ed8 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
 }

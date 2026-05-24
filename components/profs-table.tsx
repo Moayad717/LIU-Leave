@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { format } from "date-fns"
-import { Search, ChevronDown, ChevronUp } from "lucide-react"
+import { Search, CalendarDays, Building, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -13,6 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { SubmittedCalendar } from "@/components/submitted-calendar"
 
 interface RequestRow {
   id: string
@@ -29,7 +37,7 @@ interface RequestRow {
 
 export function ProfsTable({ requests }: { requests: RequestRow[] }) {
   const [search, setSearch] = useState("")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<RequestRow | null>(null)
 
   const filtered = search.trim()
     ? requests.filter((r) => {
@@ -43,94 +51,112 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
       })
     : requests
 
+  const sortedDates = selected
+    ? [...selected.dates].sort((a, b) => a.getTime() - b.getTime())
+    : []
+
   return (
-    <div className="space-y-4">
-      <div className="relative px-6 pt-2">
-        <Search className="absolute left-9 top-4.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search professor or campus..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 max-w-sm"
-        />
+    <>
+      <div className="space-y-4">
+        <div className="relative px-6 pt-2">
+          <Search className="absolute left-9 top-4.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search professor or campus..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 max-w-sm"
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+            No results for &quot;{search}&quot;.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Professor</TableHead>
+                <TableHead>Campus</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Days</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Submitted</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((req) => (
+                <TableRow
+                  key={req.id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelected(req)}
+                >
+                  <TableCell className="font-medium">
+                    {req.professor.name ?? req.professor.email}
+                  </TableCell>
+                  <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
+                  <TableCell>{req.professor.department?.name ?? "—"}</TableCell>
+                  <TableCell>{req.dates.length}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={req.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {format(req.submittedAt, "MMM d, yyyy")}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-          No results for &quot;{search}&quot;.
-        </p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Professor</TableHead>
-              <TableHead>Campus</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Days</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Submitted</TableHead>
-              <TableHead className="w-8" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((req) => {
-              const isOpen = expandedId === req.id
-              const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
+      <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null) }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {selected && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-lg">
+                  {selected.professor.name ?? selected.professor.email}
+                </DialogTitle>
+              </DialogHeader>
 
-              return (
-                <>
-                  <TableRow
-                    key={req.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setExpandedId(isOpen ? null : req.id)}
-                  >
-                    <TableCell className="font-medium">
-                      {req.professor.name ?? req.professor.email}
-                    </TableCell>
-                    <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
-                    <TableCell>{req.professor.department?.name ?? "—"}</TableCell>
-                    <TableCell>{req.dates.length}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={req.status} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {format(req.submittedAt, "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      {isOpen
-                        ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                        : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                      }
-                    </TableCell>
-                  </TableRow>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Building className="w-3.5 h-3.5" />
+                  {selected.professor.campus?.name ?? "No campus"}
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <User className="w-3.5 h-3.5" />
+                  {selected.professor.department?.name ?? "No department"}
+                </div>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  {selected.dates.length} days · submitted {format(selected.submittedAt, "MMM d, yyyy")}
+                </div>
+                <StatusBadge status={selected.status} />
+              </div>
 
-                  {isOpen && (
-                    <TableRow key={`${req.id}-dates`} className="bg-muted/30 hover:bg-muted/30">
-                      <TableCell colSpan={7} className="py-3 px-6">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">
-                          Selected dates ({sortedDates.length})
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {sortedDates.map((date) => (
-                            <Badge
-                              key={date.toISOString()}
-                              variant="secondary"
-                              className="text-xs font-normal"
-                            >
-                              {format(date, "EEE, MMM d, yyyy")}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              )
-            })}
-          </TableBody>
-        </Table>
-      )}
-    </div>
+              <Separator />
+
+              <SubmittedCalendar dates={sortedDates.map((d) => d.toISOString())} />
+
+              <Separator />
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">All dates</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sortedDates.map((date) => (
+                    <Badge key={date.toISOString()} variant="secondary" className="text-xs font-normal">
+                      {format(date, "EEE, MMM d, yyyy")}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

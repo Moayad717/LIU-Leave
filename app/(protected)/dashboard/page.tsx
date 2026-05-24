@@ -5,10 +5,13 @@ import { getCurrentAcademicYear } from "@/lib/academic-year"
 import { format } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { DateMultiPickerClient } from "@/components/date-multi-picker-client"
 import { AdminRolePicker } from "@/components/admin-role-picker"
+import { SubmittedCalendar } from "@/components/submitted-calendar"
+import { PrintButton } from "@/components/print-button"
 import Link from "next/link"
 import { CalendarDays, CheckCircle2, Clock, XCircle, MessageSquare, Info, Lock, LayoutDashboard } from "lucide-react"
 
@@ -93,7 +96,10 @@ export default async function DashboardPage({ searchParams }: Props) {
                     Submitted {format(leaveRequest.submittedAt, "MMMM d, yyyy")}
                   </CardDescription>
                 </div>
-                <StatusBadge status={leaveRequest.status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={leaveRequest.status} />
+                  {leaveRequest.status === "APPROVED" && <PrintButton />}
+                </div>
               </div>
             </CardHeader>
 
@@ -129,13 +135,15 @@ export default async function DashboardPage({ searchParams }: Props) {
 
               <div>
                 <p className="text-sm font-medium mb-3">Selected dates</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-6">
                   {sortedDates.map((date) => (
                     <Badge key={date.toISOString()} variant="secondary" className="text-xs">
                       {format(date, "EEE, MMM d, yyyy")}
                     </Badge>
                   ))}
                 </div>
+                <Separator className="mb-6" />
+                <SubmittedCalendar dates={sortedDates.map((d) => d.toISOString())} />
               </div>
             </CardContent>
           </Card>

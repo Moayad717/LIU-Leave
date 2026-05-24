@@ -61,3 +61,14 @@ export async function updateSettings(data: {
   revalidatePath("/dashboard")
   return { success: true }
 }
+
+export async function resetDatabase() {
+  await requireAdmin()
+  await db.leaveRequest.deleteMany()
+  await db.account.deleteMany()
+  await db.user.deleteMany()
+  revalidatePath("/admin")
+  revalidatePath("/admin/submissions")
+  revalidatePath("/admin/stats")
+  return { success: true }
+}

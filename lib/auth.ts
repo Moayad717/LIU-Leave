@@ -20,10 +20,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
-      if (!user.email) return false
-      if (user.email === process.env.ADMIN_BOOTSTRAP_EMAIL) return true
-      return user.email.endsWith("@liu.edu.lb")
+    async signIn() {
+      return true
     },
 
     async jwt({ token, user, trigger }) {
