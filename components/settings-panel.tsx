@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useRef } from "react"
 import { format } from "date-fns"
+import { parseDate } from "@/lib/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { toggleSubmissions, addHoliday, removeHoliday, updateSettings, resetDatabase } from "@/actions/settings"
+import { toggleSubmissions, addHoliday, removeHoliday, updateSettings, resetDatabase, bulkAddHolidays } from "@/actions/settings"
 import { toast } from "sonner"
-import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal, AlertTriangle } from "lucide-react"
+import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal, AlertTriangle, Upload } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,89 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+
+interface ParsedEntry {
+  dateStr: string
+  label: string
+}
+
+const MONTHS: Record<string, number> = {
+  january: 0, janurary: 0, february: 1, march: 2, april: 3,
+  may: 4, june: 5, july: 6, august: 7, september: 8,
+  october: 9, november: 10, december: 11,
+}
+
+function parseLIUCalendarCSV(text: string): ParsedEntry[] {
+  // Find a consecutive academic year pair like "2025-2026" (second = first + 1)
+  const allYearMatches = Array.from(text.matchAll(/(\d{4})-(\d{4})/g))
+  const academicMatch = allYearMatches.find((m) => parseInt(m[2]) === parseInt(m[1]) + 1)
+  const startYear = academicMatch ? parseInt(academicMatch[1]) : new Date().getFullYear()
+
+  const getYear = (month: number) => month >= 8 ? startYear : startYear + 1
+
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const toDateStr = (year: number, month: number, day: number) =>
+    `${year}-${pad(month + 1)}-${pad(day)}`
+
+  const results: ParsedEntry[] = []
+
+  // Patterns ordered most-specific first
+  const crossRange = /^([A-Za-z]+)\s+(\d+)-([A-Za-z]+)\s+(\d+)[:\s]+(.+)$/
+  const sameRange  = /^([A-Za-z]+)\s+(\d+)-(\d+)[:\s]+(.+)$/
+  const single     = /^([A-Za-z]+)\s+(\d+)[:\s]+(.+)$/
+
+  const cells = text.split(/\r?\n/).flatMap((line) => line.split(",").map((c) => c.trim()))
+
+  for (const cell of cells) {
+    if (!cell) continue
+
+    let m = cell.match(crossRange)
+    if (m) {
+      const month1 = MONTHS[m[1].toLowerCase()]
+      const month2 = MONTHS[m[3].toLowerCase()]
+      const label = m[5].trim()
+      if (month1 !== undefined && month2 !== undefined && label) {
+        let cur = new Date(getYear(month1), month1, parseInt(m[2]))
+        const end = new Date(getYear(month2), month2, parseInt(m[4]))
+        while (cur <= end) {
+          results.push({ dateStr: toDateStr(cur.getFullYear(), cur.getMonth(), cur.getDate()), label })
+          cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1)
+        }
+        continue
+      }
+    }
+
+    m = cell.match(sameRange)
+    if (m) {
+      const month = MONTHS[m[1].toLowerCase()]
+      const label = m[4].trim()
+      if (month !== undefined && label) {
+        const year = getYear(month)
+        for (let d = parseInt(m[2]); d <= parseInt(m[3]); d++) {
+          results.push({ dateStr: toDateStr(year, month, d), label })
+        }
+        continue
+      }
+    }
+
+    m = cell.match(single)
+    if (m) {
+      const month = MONTHS[m[1].toLowerCase()]
+      const label = m[3].trim()
+      if (month !== undefined && label) {
+        results.push({ dateStr: toDateStr(getYear(month), month, parseInt(m[2])), label })
+      }
+    }
+  }
+
+  // Deduplicate by dateStr
+  const seen = new Set<string>()
+  return results.filter(({ dateStr }) => {
+    if (seen.has(dateStr)) return false
+    seen.add(dateStr)
+    return true
+  }).sort((a, b) => a.dateStr.localeCompare(b.dateStr))
+}
 
 interface Holiday {
   id: string
@@ -54,9 +138,51 @@ export function SettingsPanel({
   const [deptThreshold, setDeptThreshold] = useState(String(initialDeptThreshold))
   const [isPending, startTransition] = useTransition()
 
+  const [importOpen, setImportOpen] = useState(false)
+  const [parsedEntries, setParsedEntries] = useState<ParsedEntry[]>([])
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      const entries = parseLIUCalendarCSV(text)
+      if (entries.length === 0) { toast.error("No date entries found in the CSV."); return }
+      setParsedEntries(entries)
+      setSelected(new Set(entries.map((_, i) => i)))
+      setImportOpen(true)
+    }
+    reader.readAsText(file)
+    e.target.value = ""
+  }
+
+  const handleImport = () => {
+    const toImport = parsedEntries.filter((_, i) => selected.has(i))
+    startTransition(async () => {
+      const result = await bulkAddHolidays(toImport.map((e) => ({ date: e.dateStr, label: e.label })))
+      if ("error" in result) { toast.error(result.error); return }
+      setHolidays((prev) =>
+        [...prev, ...result.created].sort((a, b) => a.date.getTime() - b.date.getTime())
+      )
+      setImportOpen(false)
+      toast.success(
+        result.created.length === 0
+          ? "All selected dates already exist."
+          : `${result.created.length} holiday${result.created.length !== 1 ? "s" : ""} imported.`
+      )
+    })
+  }
+
+  const toggleEntry = (i: number) =>
+    setSelected((prev) => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next })
+
   const handleToggle = () => {
     startTransition(async () => {
       const result = await toggleSubmissions()
+      if ("error" in result) { toast.error(result.error); return }
       setOpen(result.submissionsOpen)
       toast.success(result.submissionsOpen ? "Submissions are now open." : "Submissions are now closed.")
     })
@@ -254,7 +380,67 @@ export function SettingsPanel({
               <Plus className="w-4 h-4" />
               Add Holiday
             </Button>
+            <div className="h-px w-full sm:w-px sm:h-8 bg-border" />
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isPending}
+              className="gap-1.5"
+            >
+              <Upload className="w-4 h-4" />
+              Import from CSV
+            </Button>
           </div>
+
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Import Holidays from CSV</DialogTitle>
+                <DialogDescription>
+                  Found {parsedEntries.length} date entries. Uncheck any you don&apos;t want to import.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <button
+                  className="underline underline-offset-2 hover:text-foreground"
+                  onClick={() => setSelected(new Set(parsedEntries.map((_, i) => i)))}
+                >
+                  Select all
+                </button>
+                <span>·</span>
+                <button
+                  className="underline underline-offset-2 hover:text-foreground"
+                  onClick={() => setSelected(new Set())}
+                >
+                  Deselect all
+                </button>
+              </div>
+              <div className="max-h-72 overflow-y-auto border rounded-md divide-y">
+                {parsedEntries.map((entry, i) => (
+                  <label
+                    key={i}
+                    className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(i)}
+                      onChange={() => toggleEntry(i)}
+                      className="h-4 w-4 rounded border-gray-300 accent-primary"
+                    />
+                    <span className="text-xs font-mono text-muted-foreground w-24 shrink-0">{entry.dateStr}</span>
+                    <span className="text-sm">{entry.label}</span>
+                  </label>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
+                <Button onClick={handleImport} disabled={isPending || selected.size === 0}>
+                  Import {selected.size} Holiday{selected.size !== 1 ? "s" : ""}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {holidays.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
@@ -269,7 +455,7 @@ export function SettingsPanel({
                 >
                   <div className="flex items-center gap-3">
                     <Badge variant="outline" className="text-amber-600 border-amber-300 font-normal">
-                      {format(h.date, "EEE, MMM d, yyyy")}
+                      {format(parseDate(h.date), "EEE, MMM d, yyyy")}
                     </Badge>
                     {h.label && (
                       <span className="text-sm text-muted-foreground">{h.label}</span>

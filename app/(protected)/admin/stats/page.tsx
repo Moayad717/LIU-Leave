@@ -1,16 +1,18 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 import { format, getMonth } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarHeatmap } from "@/components/calendar-heatmap"
 import { CampusBreakdown } from "@/components/campus-breakdown"
 import type { CampusEntry } from "@/components/campus-breakdown"
 import { ProfsTable } from "@/components/profs-table"
 import { YearFilter } from "@/components/year-filter"
-import { AlertTriangle, CalendarDays, Building, User, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CalendarDays, Building, User, CheckCircle2, Download } from "lucide-react"
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -23,7 +25,7 @@ interface Props {
 
 export default async function StatsPage({ searchParams }: Props) {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
 
   const currentYear = getCurrentAcademicYear()
   const selectedStartYear = searchParams.year ? parseInt(searchParams.year) : currentYear.start.getFullYear()
@@ -162,11 +164,25 @@ export default async function StatsPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold tracking-tight">Statistics</h1>
           <p className="text-muted-foreground">Academic year {label}</p>
         </div>
-        <YearFilter
-          availableYears={availableYears}
-          currentStartYear={currentYear.start.getFullYear()}
-          basePath="/admin/stats"
-        />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <a href="/api/admin/export-by-day" download>
+              <Download className="w-4 h-4" />
+              Export by Day
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <a href="/api/admin/export" download>
+              <Download className="w-4 h-4" />
+              Export by Professor
+            </a>
+          </Button>
+          <YearFilter
+            availableYears={availableYears}
+            currentStartYear={currentYear.start.getFullYear()}
+            basePath="/admin/stats"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

@@ -20,12 +20,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn() {
-      return true
-    },
-
     async jwt({ token, user, trigger }) {
       if (user) {
+        // Ensure bootstrap email always gets SUPERADMIN (handles race with createUser event)
+        if (process.env.ADMIN_BOOTSTRAP_EMAIL && user.email === process.env.ADMIN_BOOTSTRAP_EMAIL) {
+          await db.user.update({
+            where: { id: user.id },
+            data: { role: Role.SUPERADMIN },
+          })
+        }
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
           select: { id: true, role: true, campusId: true },
@@ -63,20 +66,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role as Role
       session.user.campusId = (token.campusId as string | null) ?? null
       return session
-    },
-  },
-
-  events: {
-    async createUser({ user }) {
-      if (
-        process.env.ADMIN_BOOTSTRAP_EMAIL &&
-        user.email === process.env.ADMIN_BOOTSTRAP_EMAIL
-      ) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { role: Role.ADMIN },
-        })
-      }
     },
   },
 

@@ -1,13 +1,14 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
+import { isAdmin, type Role } from "@/types/enums"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UsersTable } from "@/components/users-table"
 import { Users } from "lucide-react"
 
 export default async function UsersPage() {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
 
   const users = await db.user.findMany({
     include: { campus: true, department: true },
@@ -30,7 +31,7 @@ export default async function UsersPage() {
           <CardDescription>{users.length} users total</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <UsersTable users={users} currentUserId={session.user.id} />
+          <UsersTable users={users} currentUserId={session.user.id} currentUserRole={session.user.role as Role} />
         </CardContent>
       </Card>
     </div>

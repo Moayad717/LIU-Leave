@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { getCurrentAcademicYear } from "@/lib/academic-year"
 import { format } from "date-fns"
+import { parseDate } from "@/lib/utils"
+import { isAdmin as checkIsAdmin } from "@/types/enums"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,7 +25,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   const session = await auth()
   if (!session) redirect("/auth/signin")
 
-  const isAdmin = session.user.role === "ADMIN"
+  const isAdmin = checkIsAdmin(session.user.role)
   const viewingAsProfessor = searchParams.as === "professor"
 
   if (isAdmin && !viewingAsProfessor) {
@@ -138,7 +140,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                 <div className="flex flex-wrap gap-2 mb-6">
                   {sortedDates.map((date) => (
                     <Badge key={date.toISOString()} variant="secondary" className="text-xs">
-                      {format(date, "EEE, MMM d, yyyy")}
+                      {format(parseDate(date), "EEE, MMM d, yyyy")}
                     </Badge>
                   ))}
                 </div>

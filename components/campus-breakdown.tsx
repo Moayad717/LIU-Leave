@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react"
 import { format } from "date-fns"
+import { parseDate } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { ChevronDown, ChevronUp, AlertTriangle } from "lucide-react"
 import {
@@ -150,7 +151,7 @@ function AllOverlapDetails({ overlaps, threshold }: { overlaps: DayOverlap[]; th
           <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
             <span className="text-sm font-medium min-w-[9rem]">
-              {format(new Date(o.date), "EEE, MMM d, yyyy")}
+              {format(parseDate(o.date), "EEE, MMM d, yyyy")}
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
@@ -194,7 +195,7 @@ function DeptOverlapDetails({ overlaps, threshold }: { overlaps: DeptDayOverlap[
             {entries.map((o) => (
               <div key={o.date} className="flex items-start gap-3">
                 <span className="text-sm text-muted-foreground min-w-[8rem] shrink-0">
-                  {format(new Date(o.date), "EEE, MMM d")}
+                  {format(parseDate(o.date), "EEE, MMM d")}
                 </span>
                 <div className="flex flex-wrap gap-1">
                   {o.professors.map((p) => (

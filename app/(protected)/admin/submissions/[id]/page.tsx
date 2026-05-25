@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import { format } from "date-fns"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +14,7 @@ import { ConflictPanel } from "@/components/conflict-panel"
 import type { DateConflict } from "@/components/conflict-panel"
 import { SubmittedCalendar } from "@/components/submitted-calendar"
 import { PrintButton } from "@/components/print-button"
+import { DeleteRequestButton } from "@/components/delete-request-button"
 import {
   ArrowLeft,
   CalendarDays,
@@ -31,7 +33,7 @@ interface Props {
 
 export default async function SubmissionDetailPage({ params }: Props) {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
 
   const [req, appSettings] = await Promise.all([
     db.leaveRequest.findUnique({
@@ -111,7 +113,10 @@ export default async function SubmissionDetailPage({ params }: Props) {
             <p className="text-sm text-muted-foreground">ID: {req.id}</p>
           </div>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          <DeleteRequestButton requestId={req.id} />
+          <PrintButton />
+        </div>
       </div>
 
       <div className="hidden print:block mb-6">

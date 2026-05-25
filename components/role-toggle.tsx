@@ -11,15 +11,26 @@ interface Props {
   userId: string
   currentRole: Role
   isSelf: boolean
+  callerRole: Role
 }
 
-export function RoleToggle({ userId, currentRole, isSelf }: Props) {
+export function RoleToggle({ userId, currentRole, isSelf, callerRole }: Props) {
   const [isPending, startTransition] = useTransition()
 
   if (isSelf) {
     return (
       <span className="text-xs text-muted-foreground italic">cannot demote self</span>
     )
+  }
+
+  // Only SUPERADMIN can touch other SUPERADMIN or ADMIN accounts
+  if (currentRole === "SUPERADMIN") {
+    return <span className="text-xs text-muted-foreground italic">superadmin</span>
+  }
+
+  // Regular admins can only promote professors, not demote other admins
+  if (currentRole === "ADMIN" && callerRole !== "SUPERADMIN") {
+    return <span className="text-xs text-muted-foreground italic">admin</span>
   }
 
   const newRole = currentRole === "ADMIN" ? Role.PROFESSOR : Role.ADMIN

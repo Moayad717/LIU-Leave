@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import Link from "next/link"
 import { format } from "date-fns"
 import { Suspense } from "react"
@@ -41,7 +42,7 @@ interface Props {
 
 export default async function SubmissionsPage({ searchParams }: Props) {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
 
   const currentYear = getCurrentAcademicYear()
   const selectedStartYear = searchParams.year ? parseInt(searchParams.year) : currentYear.start.getFullYear()
@@ -99,7 +100,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
         <Button variant="outline" size="sm" className="gap-1.5" asChild>
           <a href="/api/admin/export" download>
             <Download className="w-4 h-4" />
-            Export to Excel
+            Export by Professor
           </a>
         </Button>
       </div>

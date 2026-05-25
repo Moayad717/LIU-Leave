@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
+import { parseDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -33,7 +34,7 @@ export function ReviewForm({ requestId, dates }: Props) {
   const buildRejectComment = () => {
     const flaggedDates = dates
       .filter((iso) => flagged.has(iso))
-      .map((iso) => format(new Date(iso), "EEE, MMM d"))
+      .map((iso) => format(parseDate(iso), "EEE, MMM d"))
     const dateLine =
       flaggedDates.length > 0
         ? `Cannot approve the following dates: ${flaggedDates.join(", ")}.`
@@ -142,7 +143,7 @@ export function ReviewForm({ requestId, dates }: Props) {
                     : "bg-white text-muted-foreground border-gray-200 hover:border-gray-300"
                 }`}
               >
-                {format(new Date(iso), "EEE, MMM d")}
+                {format(parseDate(iso), "EEE, MMM d")}
               </button>
             )
           })}

@@ -2,12 +2,13 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import { revalidatePath } from "next/cache"
 
 // Auth guard outside try/catch
 async function requireAdmin() {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") throw new Error("Unauthorized")
+  if (!session || !isAdmin(session.user.role)) throw new Error("Unauthorized")
 }
 
 export async function toggleSubmissions() {
@@ -77,6 +78,32 @@ export async function updateSettings(data: {
     revalidatePath("/admin/stats")
     revalidatePath("/dashboard")
     return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
+export async function bulkAddHolidays(entries: { date: string; label: string }[]) {
+  await requireAdmin()
+
+  try {
+    const incomingDates = entries.map((e) => new Date(e.date + "T00:00:00"))
+    const existing = await db.holiday.findMany({
+      where: { date: { in: incomingDates } },
+      select: { date: true },
+    })
+    const existingSet = new Set(existing.map((h) => h.date.toISOString().slice(0, 10)))
+    const toCreate = entries.filter((e) => !existingSet.has(e.date))
+
+    const created = await Promise.all(
+      toCreate.map((e) =>
+        db.holiday.create({ data: { date: new Date(e.date + "T00:00:00"), label: e.label || null } })
+      )
+    )
+
+    revalidatePath("/admin/settings")
+    revalidatePath("/dashboard")
+    return { created }
   } catch {
     return { error: "Something went wrong. Please try again." }
   }

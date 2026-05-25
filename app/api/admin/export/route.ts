@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import { format } from "date-fns"
 import * as XLSX from "xlsx"
 
 export async function GET() {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

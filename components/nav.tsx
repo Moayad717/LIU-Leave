@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import type { Role } from "@/types/enums"
+import { isAdmin, type Role } from "@/types/enums"
 
 interface NavUser {
   name?: string | null
@@ -39,7 +39,7 @@ const adminLinks = [
 
 export function Nav({ user }: { user: NavUser }) {
   const pathname = usePathname()
-  const links = user.role === "ADMIN" ? adminLinks : professorLinks
+  const links = isAdmin(user.role) ? adminLinks : professorLinks
 
   const initials = user.name
     ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)

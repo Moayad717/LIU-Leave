@@ -2,14 +2,14 @@
 
 import { auth, signOut } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { LeaveStatus, Role } from "@/types/enums"
+import { isAdmin, LeaveStatus, Role } from "@/types/enums"
 import { revalidatePath } from "next/cache"
 
 // Auth guard kept separate so signOut's internal redirect() is never inside a try/catch
 async function requireAdmin() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Not authenticated.")
-  if (session.user.role !== "ADMIN") throw new Error("Admin access required.")
+  if (!isAdmin(session.user.role)) throw new Error("Admin access required.")
 
   const user = await db.user.findUnique({ where: { id: session.user.id } })
   // signOut calls redirect() internally — must not be inside any try/catch
@@ -58,8 +58,21 @@ export async function reviewLeaveRequest(
   }
 }
 
+export async function deleteLeaveRequest(requestId: string) {
+  await requireAdmin()
+
+  try {
+    await db.leaveRequest.delete({ where: { id: requestId } })
+    revalidatePath("/admin")
+    revalidatePath("/admin/submissions")
+    revalidatePath("/admin/stats")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
 export async function updateUserRole(targetUserId: string, newRole: Role) {
-  // requireAdmin is outside try/catch
   const session = await requireAdmin()
 
   if (targetUserId === session!.user.id) {
@@ -70,10 +83,19 @@ export async function updateUserRole(targetUserId: string, newRole: Role) {
     const target = await db.user.findUnique({ where: { id: targetUserId } })
     if (!target) return { error: "User not found." }
 
+    const callerRole = session!.user.role
+    const targetRole = target.role as Role
+
+    // Only SUPERADMIN can touch other admins or assign SUPERADMIN
+    if (targetRole !== Role.PROFESSOR && callerRole !== Role.SUPERADMIN) {
+      return { error: "Only the superadmin can demote admins." }
+    }
+    if (newRole === Role.SUPERADMIN && callerRole !== Role.SUPERADMIN) {
+      return { error: "Only the superadmin can assign the superadmin role." }
+    }
+
     await db.user.update({ where: { id: targetUserId }, data: { role: newRole } })
-
     revalidatePath("/admin/users")
-
     return { success: true }
   } catch {
     return { error: "Something went wrong. Please try again." }

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import { getCurrentAcademicYear } from "@/lib/academic-year"
 import { format, startOfWeek, endOfWeek, isWithinInterval } from "date-fns"
 import Link from "next/link"
@@ -29,7 +30,7 @@ import { QuickApproveButton } from "@/components/quick-approve-button"
 
 export default async function AdminPage() {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
 
   const { start, end, label } = getCurrentAcademicYear()
 

@@ -31,9 +31,10 @@ interface UserRow {
 interface Props {
   users: UserRow[]
   currentUserId: string
+  currentUserRole: Role
 }
 
-export function UsersTable({ users, currentUserId }: Props) {
+export function UsersTable({ users, currentUserId, currentUserRole }: Props) {
   const [search, setSearch] = useState("")
 
   const filtered = search.trim()
@@ -105,15 +106,19 @@ export function UsersTable({ users, currentUserId }: Props) {
                   <TableCell>{user.campus?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>{user.department?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
-                      {user.role === "ADMIN" ? "Admin" : "Professor"}
-                    </Badge>
+                    {user.role === "SUPERADMIN" ? (
+                      <Badge variant="default" className="bg-violet-600 hover:bg-violet-700">Superadmin</Badge>
+                    ) : user.role === "ADMIN" ? (
+                      <Badge variant="default">Admin</Badge>
+                    ) : (
+                      <Badge variant="secondary">Professor</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {format(user.createdAt, "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
-                    <RoleToggle userId={user.id} currentRole={user.role} isSelf={isSelf} />
+                    <RoleToggle userId={user.id} currentRole={user.role} isSelf={isSelf} callerRole={currentUserRole} />
                   </TableCell>
                 </TableRow>
               )

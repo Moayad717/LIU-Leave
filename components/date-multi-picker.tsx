@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, X, CalendarCheck, Save, Check } from "lucide
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { cn, parseDate } from "@/lib/utils"
 import { submitLeaveRequest } from "@/actions/leave"
 import { toast } from "sonner"
 import "react-day-picker/dist/style.css"
@@ -33,7 +33,7 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
   const [isPending, startTransition] = useTransition()
   const [justSaved, setJustSaved] = useState(false)
 
-  const holidayDates = holidays.map((h) => new Date(h.iso))
+  const holidayDates = holidays.map((h) => parseDate(h.iso))
 
   useEffect(() => {
     try {
@@ -87,7 +87,7 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
 
     startTransition(async () => {
       const result = await submitLeaveRequest(
-        selected.map((d) => d.toISOString())
+        selected.map((d) => format(d, "yyyy-MM-dd"))
       )
       if (result?.error) {
         toast.error(result.error)
@@ -228,7 +228,7 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
           <span className="font-medium text-amber-600">Holidays:</span>
           {holidays.map((h) => (
             <span key={h.iso} className="text-amber-600/80">
-              {format(new Date(h.iso), "MMM d")}{h.label ? ` — ${h.label}` : ""}
+              {format(parseDate(h.iso), "MMM d")}{h.label ? ` — ${h.label}` : ""}
             </span>
           ))}
         </div>

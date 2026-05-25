@@ -9,7 +9,7 @@ import {
   format,
   getMonth,
 } from "date-fns"
-import { X } from "lucide-react"
+import { parseDate } from "@/lib/utils"
 
 interface ProfOnLeave {
   name: string
@@ -97,7 +97,10 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
               ))}
             </div>
 
-            <div className="flex gap-0.5">
+            <div
+              className="flex gap-0.5"
+              onMouseLeave={() => setSelectedDay(null)}
+            >
               {weeks.map((week, colIndex) => (
                 <div key={colIndex} className="flex flex-col gap-0.5">
                   {week.map((day) => {
@@ -109,11 +112,10 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                     return (
                       <div
                         key={key}
-                        title={isInRange ? `${format(day, "MMM d, yyyy")}: ${count} professor${count !== 1 ? "s" : ""}` : undefined}
-                        onClick={() => isInRange && setSelectedDay(isSelected ? null : key)}
+                        onMouseEnter={() => isInRange && setSelectedDay(key)}
                         className={`w-4 h-4 rounded-sm transition-all ${
                           isInRange
-                            ? `${getColor(count, isSelected)} cursor-pointer hover:opacity-80`
+                            ? `${getColor(count, isSelected)} cursor-default`
                             : "bg-transparent"
                         }`}
                       />
@@ -139,12 +141,12 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
         </div>
       </div>
 
-      {selectedDay ? (
-        <div className="rounded-lg border bg-muted/40 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
+      <div className="rounded-lg border bg-muted/40 p-4 min-h-[72px]">
+        {selectedDay ? (
+          <>
+            <div className="mb-3">
               <p className="font-semibold text-sm">
-                {format(new Date(selectedDay), "EEEE, MMMM d, yyyy")}
+                {format(parseDate(selectedDay), "EEEE, MMMM d, yyyy")}
               </p>
               <p className="text-xs text-muted-foreground">
                 {selectedProfs.length === 0
@@ -152,37 +154,30 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                   : `${selectedProfs.length} professor${selectedProfs.length !== 1 ? "s" : ""} on approved leave`}
               </p>
             </div>
-            <button
-              onClick={() => setSelectedDay(null)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {selectedProfs.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {selectedProfs.map((p) => (
-                <div
-                  key={p.name}
-                  className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm"
-                >
-                  <span className="font-medium">{p.name}</span>
-                  <span className="text-muted-foreground text-xs">{p.campus}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              All professors are available on this day.
-            </p>
-          )}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground ml-8">
-          Click any day to see who is on leave.
-        </p>
-      )}
+            {selectedProfs.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {selectedProfs.map((p) => (
+                  <div
+                    key={p.name}
+                    className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm"
+                  >
+                    <span className="font-medium">{p.name}</span>
+                    <span className="text-muted-foreground text-xs">{p.campus}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                All professors are available on this day.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Hover over any day to see who is on leave.
+          </p>
+        )}
+      </div>
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { DayPicker } from "react-day-picker"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, parseDate } from "@/lib/utils"
 import "react-day-picker/dist/style.css"
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function SubmittedCalendar({ dates }: Props) {
-  const parsed = dates.map((d) => new Date(d))
+  const parsed = dates.map((d) => parseDate(d))
   const defaultMonth = parsed.length > 0
     ? new Date(parsed[0].getFullYear(), parsed[0].getMonth(), 1)
     : new Date()

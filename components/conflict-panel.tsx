@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, CheckCircle2, Users, Building } from "lucide-react"
 import { format } from "date-fns"
+import { parseDate } from "@/lib/utils"
 
 export interface DateConflict {
   date: string
@@ -79,7 +80,7 @@ export function ConflictPanel({
             >
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <span className="font-medium min-w-[9rem]">
-                  {format(new Date(c.date), "EEE, MMM d, yyyy")}
+                  {format(parseDate(c.date), "EEE, MMM d, yyyy")}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   {isClean && (

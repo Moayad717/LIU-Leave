@@ -1,12 +1,13 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
+import { isAdmin } from "@/types/enums"
 import { SettingsPanel } from "@/components/settings-panel"
 import { Settings } from "lucide-react"
 
 export default async function SettingsPage() {
   const session = await auth()
-  if (!session || session.user.role !== "ADMIN") redirect("/dashboard")
+  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
 
   const [settings, holidays] = await Promise.all([
     db.appSettings.findUnique({ where: { id: "global" } }),
