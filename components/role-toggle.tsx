@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { signOut } from "next-auth/react"
 import { Role } from "@/types/enums"
 import { Button } from "@/components/ui/button"
 import { updateUserRole, transferSuperadmin } from "@/actions/admin"
@@ -28,8 +27,6 @@ interface Props {
 export function RoleToggle({ userId, userName, currentRole, isSelf, callerRole }: Props) {
   const [isPending, startTransition] = useTransition()
   const [transferOpen, setTransferOpen] = useState(false)
-  const router = useRouter()
-  const { update } = useSession()
 
   if (isSelf) {
     return <span className="text-xs text-muted-foreground italic">cannot change own role</span>
@@ -59,10 +56,9 @@ export function RoleToggle({ userId, userName, currentRole, isSelf, callerRole }
       const result = await transferSuperadmin(userId)
       if (result?.error) { toast.error(result.error); return }
       setTransferOpen(false)
-      toast.success(`${userName} is now superadmin. You have been demoted to admin.`)
-      // Refresh JWT then re-render server components so stale role is cleared immediately
-      await update()
-      router.refresh()
+      toast.success(`${userName} is now superadmin. Signing you out…`)
+      await new Promise((r) => setTimeout(r, 1500))
+      await signOut({ callbackUrl: "/auth/signin" })
     })
   }
 
@@ -86,8 +82,7 @@ export function RoleToggle({ userId, userName, currentRole, isSelf, callerRole }
               <DialogHeader>
                 <DialogTitle>Transfer Superadmin to {userName}?</DialogTitle>
                 <DialogDescription>
-                  <strong>{userName}</strong> will become the new Superadmin.
-                  You will be demoted to Admin. This cannot be undone from the UI.
+                  <strong>{userName}</strong> will become the new Superadmin. You will be demoted to Admin and signed out immediately.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>

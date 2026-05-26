@@ -22,17 +22,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user, trigger }) {
       if (user) {
-        // Ensure bootstrap email always gets SUPERADMIN (handles race with createUser event)
-        if (process.env.ADMIN_BOOTSTRAP_EMAIL && user.email === process.env.ADMIN_BOOTSTRAP_EMAIL) {
-          await db.user.update({
-            where: { id: user.id },
-            data: { role: Role.SUPERADMIN },
-          })
-        }
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
           select: { id: true, role: true, campusId: true },
         })
+        // Bootstrap: promote to SUPERADMIN only if no other SUPERADMIN exists yet.
+        // This handles first-time setup without overriding a deliberate demotion.
+        if (
+          process.env.ADMIN_BOOTSTRAP_EMAIL &&
+          user.email === process.env.ADMIN_BOOTSTRAP_EMAIL &&
+          dbUser?.role !== Role.SUPERADMIN
+        ) {
+          const otherSuperadmin = await db.user.findFirst({
+            where: { role: Role.SUPERADMIN, id: { not: user.id! } },
+            select: { id: true },
+          })
+          if (!otherSuperadmin) {
+            await db.user.update({ where: { id: user.id }, data: { role: Role.SUPERADMIN } })
+            if (dbUser) dbUser.role = Role.SUPERADMIN
+          }
+        }
         if (dbUser) {
           token.id = dbUser.id
           token.role = dbUser.role
