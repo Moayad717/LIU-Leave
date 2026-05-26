@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LIU Leave — User Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:   #2563eb;
+      --accent:    #7c3aed;
+      --success:   #16a34a;
+      --warning:   #d97706;
+      --danger:    #dc2626;
+      --muted:     #64748b;
+      --border:    #e2e8f0;
+      --bg:        #f8fafc;
+      --card:      #ffffff;
+      --text:      #0f172a;
+      --subtext:   #475569;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Layout ── */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 240px; height: 100vh;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 0 20px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .sidebar-logo span { font-weight: 700; font-size: 16px; color: var(--primary); }
+    .sidebar-logo small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+    .sidebar nav a {
+      display: block;
+      padding: 6px 20px;
+      text-decoration: none;
+      color: var(--subtext);
+      font-size: 13px;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .sidebar nav a:hover { color: var(--primary); background: #eff6ff; border-left-color: var(--primary); }
+    .sidebar nav .section-header {
+      padding: 12px 20px 4px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .content {
+      margin-left: 240px;
+      max-width: 820px;
+      padding: 48px 48px 80px;
+    }
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .content { margin-left: 0; padding: 24px 20px; }
+    }
+
+    /* ── Typography ── */
+    h1 { font-size: 2rem; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+    h2 { font-size: 1.4rem; font-weight: 700; margin: 48px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+    h3 { font-size: 1.05rem; font-weight: 700; margin: 28px 0 8px; color: var(--primary); }
+    h4 { font-size: 0.95rem; font-weight: 700; margin: 20px 0 6px; color: var(--text); }
+    p  { margin-bottom: 14px; color: var(--subtext); }
+    ul, ol { padding-left: 22px; margin-bottom: 14px; color: var(--subtext); }
+    li { margin-bottom: 6px; }
+    strong { color: var(--text); }
+    a  { color: var(--primary); }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #7c3aed 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 40px 44px;
+      margin-bottom: 40px;
+    }
+    .hero h1 { color: white; font-size: 2.1rem; }
+    .hero p  { color: rgba(255,255,255,0.75); font-size: 1rem; margin-bottom: 0; }
+    .hero .subtitle { margin-top: 6px; font-size: 0.9rem; color: rgba(255,255,255,0.6); }
+
+    /* ── Screenshot placeholder ── */
+    .screenshot {
+      background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      padding: 28px 24px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .screenshot-icon { font-size: 32px; margin-bottom: 8px; }
+    .screenshot-title { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 4px; }
+    .screenshot-desc { font-size: 12px; color: var(--muted); margin: 0; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0 24px; }
+    th {
+      background: #f1f5f9; text-align: left;
+      padding: 10px 14px; font-weight: 700;
+      font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--subtext);
+      border-bottom: 2px solid var(--border);
+    }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--subtext); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+
+    /* ── Callouts ── */
+    .tip, .warning, .info-box, .danger-box {
+      border-radius: 10px; padding: 14px 18px; margin: 16px 0; font-size: 14px;
+    }
+    .tip       { background: #f0fdf4; border-left: 4px solid var(--success); }
+    .warning   { background: #fffbeb; border-left: 4px solid var(--warning); }
+    .info-box  { background: #eff6ff; border-left: 4px solid var(--primary); }
+    .danger-box{ background: #fef2f2; border-left: 4px solid var(--danger);  }
+    .tip p, .warning p, .info-box p, .danger-box p { margin-bottom: 0; color: var(--subtext); }
+    .tip strong     { color: var(--success); }
+    .warning strong { color: var(--warning); }
+    .info-box strong{ color: var(--primary); }
+    .danger-box strong { color: var(--danger); }
+
+    /* ── Step list ── */
+    .steps { counter-reset: step; padding: 0; list-style: none; }
+    .steps li {
+      counter-increment: step;
+      display: flex; gap: 16px;
+      margin-bottom: 20px; align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      background: var(--primary); color: white;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .steps li > div { flex: 1; }
+    .steps li strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+
+    /* ── Role badges ── */
+    .role-badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 99px; font-size: 12px; font-weight: 700;
+    }
+    .role-prof  { background: #e0e7ff; color: #3730a3; }
+    .role-admin { background: #dcfce7; color: #166534; }
+    .role-super { background: #ede9fe; color: #6d28d9; }
+
+    /* ── Flow ── */
+    .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+    .flow-node {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 14px;
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .flow-arrow { color: var(--muted); font-size: 20px; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span>LIU Leave</span>
+    <small>User Guide</small>
+  </div>
+  <nav>
+    <div class="section-header">Introduction</div>
+    <a href="#overview">What is LIU Leave?</a>
+    <a href="#roles">User Roles</a>
+    <a href="#signin">Signing In</a>
+    <a href="#onboarding">Onboarding</a>
+
+    <div class="section-header">For Professors</div>
+    <a href="#prof-dashboard">Your Dashboard</a>
+    <a href="#submitting">Submitting a Request</a>
+    <a href="#tracking">Tracking Your Status</a>
+    <a href="#printing">Printing an Approved Form</a>
+    <a href="#profile">Your Profile</a>
+
+    <div class="section-header">For Admins</div>
+    <a href="#admin-entry">Entering Admin Panel</a>
+    <a href="#admin-dashboard">Admin Dashboard</a>
+    <a href="#submissions">Submissions List</a>
+    <a href="#reviewing">Reviewing a Request</a>
+    <a href="#quick-approve">Quick Approve</a>
+    <a href="#statistics">Statistics</a>
+    <a href="#heatmap">Leave Heatmap</a>
+    <a href="#by-campus">By Campus</a>
+    <a href="#by-professor">By Professor</a>
+    <a href="#export">Exporting Data</a>
+    <a href="#users">Managing Users</a>
+    <a href="#settings">Settings</a>
+    <a href="#holidays">Managing Holidays</a>
+    <a href="#csv-import">Importing from CSV</a>
+
+    <div class="section-header">Superadmin</div>
+    <a href="#superadmin">Superadmin Role</a>
+    <a href="#transfer">Transferring the Role</a>
+  </nav>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="content">
+
+  <div class="hero">
+    <h1>LIU Leave — User Guide</h1>
+    <p>A complete guide to using the leave management system for Lebanese International University.</p>
+    <p class="subtitle">For professors, admins, and superadmins.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       INTRODUCTION
+  ═══════════════════════════════════════════ -->
+  <h2 id="overview">What is LIU Leave?</h2>
+  <p>
+    LIU Leave is the official leave management system for LIU teaching staff. Professors use it to submit their leave requests for the academic year. Admins use it to review those requests, monitor campus absences, and export reports.
+  </p>
+  <p>Everything happens through your browser — no installations, no forms to print before submitting. Once an admin approves your request, you can print the official form directly from the app.</p>
+
+  <!-- ══════════════════════════════════════════
+       ROLES
+  ═══════════════════════════════════════════ -->
+  <h2 id="roles">User Roles</h2>
+  <p>Every user has one of three roles. Your role determines what you can see and do in the app.</p>
+
+  <table>
+    <tr>
+      <th>Role</th>
+      <th>Who</th>
+      <th>What they can do</th>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-prof">Professor</span></td>
+      <td>All teaching staff</td>
+      <td>Submit one leave request per academic year, view its status, print the approved form</td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-admin">Admin</span></td>
+      <td>Administrative staff</td>
+      <td>All professor actions, plus review requests, view statistics, manage users and settings</td>
+    </tr>
+    <tr>
+      <td><span class="role-badge role-super">Superadmin</span></td>
+      <td>One designated person</td>
+      <td>All admin actions, plus promote/demote other admins and transfer the superadmin role</td>
+    </tr>
+  </table>
+
+  <div class="info-box">
+    <p><strong>New users always start as Professors.</strong> An admin can promote them to Admin. There is always exactly one Superadmin in the system.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SIGN IN
+  ═══════════════════════════════════════════ -->
+  <h2 id="signin">Signing In</h2>
+  <p>LIU Leave uses Google sign-in — there is no separate username or password to remember.</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Open the app and click "Continue with Google"</strong>
+        <p>You will be taken to Google's account chooser page.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Select your LIU Google account</strong>
+        <p>Use the account associated with your LIU email address.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>You are redirected back to the app</strong>
+        <p>First-time users are taken to the onboarding page. Returning users go straight to the dashboard.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="tip">
+    <p><strong>Signing out:</strong> Click your profile picture or name in the top navigation bar, then select "Sign out".</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       ONBOARDING
+  ═══════════════════════════════════════════ -->
+  <h2 id="onboarding">Onboarding</h2>
+  <p>The first time you sign in, the app asks for your campus and department before you can continue. This is a one-time step — you only see this screen once.</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Select your campus</strong>
+        <p>Pick from the dropdown list of LIU campuses.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Select your department</strong>
+        <p>Pick from the dropdown list of departments.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Click "Continue"</strong>
+        <p>You are taken to your dashboard. Your campus and department are saved to your profile.</p>
+      </div>
+    </li>
+  </ol>
+
+  <p>You can change your campus or department later at any time from the <a href="#profile">Profile page</a>.</p>
+
+  <hr class="divider" />
+
+  <!-- ══════════════════════════════════════════
+       PROFESSOR FLOW
+  ═══════════════════════════════════════════ -->
+  <h2 id="prof-dashboard">Your Dashboard</h2>
+  <p>After signing in, professors land on their personal dashboard. The dashboard shows:</p>
+  <ul>
+    <li>A welcome banner with your name, the current academic year, your campus, and your department</li>
+    <li>Your leave request status (or the submission form if you haven't submitted yet)</li>
+  </ul>
+
+  <img src="tutorial/prof-dash-noreq.png" alt="Professor Dashboard — No Request Yet" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+  <img src="tutorial/prof-dash-withreq.png" alt="Professor Dashboard — Request Submitted" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       SUBMITTING
+  ═══════════════════════════════════════════ -->
+  <h2 id="submitting">Submitting a Leave Request</h2>
+  <p>Leave requests are submitted through an interactive calendar on your dashboard.</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Click on the days you want to take off</strong>
+        <p>The calendar shows the full academic year. Click any working day to select it — it turns blue. Click again to deselect.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Check your day count</strong>
+        <p>A counter below the calendar shows how many days you have selected and how many remain. The maximum is set by the admin (default: 22 days).</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Click "Submit Request"</strong>
+        <p>Your request is saved immediately. The calendar is replaced by a status card showing your selected dates with a yellow "Pending" badge.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="warning">
+    <p><strong>You can only submit one request per academic year.</strong> Choose your dates carefully before submitting. If your request is rejected, you will be able to resubmit with different dates.</p>
+  </div>
+
+  <h4>What you cannot select</h4>
+  <ul>
+    <li><strong>Weekends</strong> — automatically grayed out</li>
+    <li><strong>Public holidays</strong> — dates blocked by the admin (shown in a different color)</li>
+    <li><strong>Dates outside the academic year</strong> — the current academic year runs September 1 to August 31</li>
+  </ul>
+
+  <div class="info-box">
+    <p><strong>Submissions may be closed.</strong> If the admin has closed submissions for the period, a "Submissions Closed" message appears instead of the calendar. Check back later or contact your admin.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       TRACKING STATUS
+  ═══════════════════════════════════════════ -->
+  <h2 id="tracking">Tracking Your Request Status</h2>
+  <p>Once you submit, your dashboard switches to a status card that updates in real time.</p>
+
+  <table>
+    <tr>
+      <th>Status</th>
+      <th>Color</th>
+      <th>What it means</th>
+    </tr>
+    <tr>
+      <td><strong>Pending</strong></td>
+      <td>Yellow badge</td>
+      <td>Your request is waiting for an admin to review it. No action needed from you.</td>
+    </tr>
+    <tr>
+      <td><strong>Approved</strong></td>
+      <td>Green badge</td>
+      <td>Your leave has been approved. A Print button appears so you can download your official leave form.</td>
+    </tr>
+    <tr>
+      <td><strong>Rejected</strong></td>
+      <td>Red badge</td>
+      <td>Your request was not approved. The admin usually includes a comment explaining why. You can submit a new request with different dates.</td>
+    </tr>
+  </table>
+
+  <p>If the admin added a comment to your request (either with an approval or a rejection), it appears in a highlighted box on your dashboard.</p>
+
+  <img src="tutorial/submission-reject.png" alt="Rejected Request with Resubmission Form" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       PRINTING
+  ═══════════════════════════════════════════ -->
+  <h2 id="printing">Printing an Approved Form</h2>
+  <p>Once your request is approved, a <strong>Print</strong> button appears on your dashboard (and on the admin's detail page for your request).</p>
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Click "Print"</strong>
+        <p>Your browser's print dialog opens with a formatted version of your leave request.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Print or save as PDF</strong>
+        <p>Select your printer, or choose "Save as PDF" from the destination dropdown to keep a digital copy.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="tip">
+    <p><strong>Tip:</strong> The print view is clean — navigation, buttons, and the admin conflict analysis are automatically hidden, so only the relevant leave details appear on the printed page.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       PROFILE
+  ═══════════════════════════════════════════ -->
+  <h2 id="profile">Your Profile</h2>
+  <p>Click your name or avatar in the top navigation to access your Profile page. Here you can update:</p>
+  <ul>
+    <li>Your <strong>campus</strong></li>
+    <li>Your <strong>department</strong></li>
+  </ul>
+  <p>Changes take effect immediately. Your updated campus and department will be shown on your dashboard and on all future leave requests.</p>
+
+
+  <hr class="divider" />
+
+  <!-- ══════════════════════════════════════════
+       ADMIN FLOW
+  ═══════════════════════════════════════════ -->
+  <h2 id="admin-entry">Entering the Admin Panel</h2>
+  <p>When an admin logs in, the dashboard shows a role picker card instead of a leave form. Choose how to proceed:</p>
+
+  <div class="flow">
+    <div class="flow-node">Sign in as Admin</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">Go to Admin Panel</div>
+  </div>
+  <div class="flow">
+    <div class="flow-node">Sign in as Admin</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">View as Professor</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">Use the leave form yourself</div>
+  </div>
+
+  <p>If you choose "View as Professor," a yellow banner appears at the top of the page with a link back to the Admin Panel.</p>
+
+  <p>The top navigation bar gives admins quick access to:</p>
+  <ul>
+    <li><strong>Admin Dashboard</strong> — overview and quick actions</li>
+    <li><strong>Submissions</strong> — all leave requests</li>
+    <li><strong>Statistics</strong> — heatmap, campus breakdown, professor breakdown</li>
+    <li><strong>Users</strong> — manage user roles</li>
+    <li><strong>Settings</strong> — configure thresholds, holidays, and availability</li>
+  </ul>
+
+  <!-- ══════════════════════════════════════════
+       ADMIN DASHBOARD
+  ═══════════════════════════════════════════ -->
+  <h2 id="admin-dashboard">Admin Dashboard</h2>
+  <p>The admin dashboard gives you a snapshot of the current academic year at a glance.</p>
+
+  <h3>Summary Cards</h3>
+  <p>Four cards across the top show the total request count for the current academic year, broken down by status: <strong>Total</strong>, <strong>Pending</strong>, <strong>Approved</strong>, and <strong>Rejected</strong>.</p>
+
+  <h3>Pending Reviews</h3>
+  <p>A table of all unreviewed requests. Each row shows the professor's name, campus, and number of days requested. You can quick-approve directly from here or click the arrow icon to open the full review page.</p>
+
+  <h3>This Week's Absences</h3>
+  <p>Shows which professors have approved leave days falling in the current week (Monday to Sunday). This helps you know at a glance who is not on campus right now.</p>
+
+  <h3>Overlap Alerts</h3>
+  <p>A count of how many days have too many professors absent from the same campus at once. Click "View full analysis" to go to the Statistics page for details.</p>
+
+  <img src="tutorial/admin-dash.png" alt="Admin Dashboard" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       SUBMISSIONS LIST
+  ═══════════════════════════════════════════ -->
+  <h2 id="submissions">Submissions List</h2>
+  <p>The Submissions page lists every leave request for the selected academic year. You can filter the list to find exactly what you need.</p>
+
+  <h3>Filters</h3>
+  <ul>
+    <li><strong>Academic Year</strong> — switch between current and past years</li>
+    <li><strong>Campus</strong> — show only requests from a specific campus</li>
+    <li><strong>Status</strong> — show only Pending, Approved, or Rejected</li>
+    <li><strong>Search</strong> — find a specific professor by name or email</li>
+  </ul>
+
+  <h3>The Table</h3>
+  <p>Each row shows the professor's name, campus, department, number of requested days, submission date, and current status. Pending requests have an inline Quick Approve button for fast processing.</p>
+
+  <img src="tutorial/submission-page.png" alt="Submissions List" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       REVIEWING
+  ═══════════════════════════════════════════ -->
+  <h2 id="reviewing">Reviewing a Leave Request</h2>
+  <p>Clicking the arrow on any request row opens its full detail page. This is where you review, approve, or reject the request.</p>
+
+  <h3>Request Details</h3>
+  <p>The top card shows the professor's full name, campus, department, number of days requested, and when it was submitted. If it has already been reviewed, the reviewer's name and review date are shown too.</p>
+
+  <h3>Selected Dates</h3>
+  <p>All requested dates are listed as date badges and displayed on a mini calendar so you can visualize the pattern of absence.</p>
+
+  <h3>Conflict Analysis</h3>
+  <p>This section helps you make an informed decision. For each requested date, the system checks how many other professors from the same campus already have approved leave. Dates that would push absenteeism above the configured threshold are highlighted with a warning flag.</p>
+
+  <ul>
+    <li><strong>Campus alert</strong> — too many professors absent from the same campus on one day</li>
+    <li><strong>Department alert</strong> — too many professors absent from the same department on one day</li>
+  </ul>
+
+  <img src="tutorial/conflict-analysis.png" alt="Conflict Analysis Panel" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+  <h3>Approving or Rejecting</h3>
+  <p>At the bottom of the page (for pending requests only) is the review form:</p>
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Write a comment (optional for approval, required for rejection)</strong>
+        <p>The professor will see this comment on their dashboard.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Click "Approve" or "Reject"</strong>
+        <p>The status updates immediately. The professor's dashboard reflects the change on their next page load.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="tip">
+    <p><strong>Deleting a request:</strong> A trash icon in the top-right corner of the detail page lets you permanently delete the request. Use this only when a request was submitted by mistake.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       QUICK APPROVE
+  ═══════════════════════════════════════════ -->
+  <h2 id="quick-approve">Quick Approve</h2>
+  <p>Both the Admin Dashboard and the Submissions List have a <strong>Quick Approve</strong> button (a small checkmark icon) next to each pending request. Clicking it immediately approves the request without opening the detail page — no comment required. Use this for straightforward approvals where you don't need to review the conflict analysis.</p>
+
+
+  <!-- ══════════════════════════════════════════
+       STATISTICS
+  ═══════════════════════════════════════════ -->
+  <h2 id="statistics">Statistics Page</h2>
+  <p>The Statistics page gives a high-level view of approved leave across the year. Three summary cards at the top show:</p>
+  <ul>
+    <li><strong>Approved Days</strong> — total leave days across all professors</li>
+    <li><strong>Professors</strong> — number of professors who have approved leave</li>
+    <li><strong>Campus Overlap Days</strong> — days where a campus exceeded the absenteeism threshold</li>
+  </ul>
+  <p>Below the cards, three tabs let you explore the data in different ways.</p>
+
+
+
+  <!-- ══════════════════════════════════════════
+       HEATMAP
+  ═══════════════════════════════════════════ -->
+  <h2 id="heatmap">Leave Heatmap</h2>
+  <p>The Heatmap tab shows a calendar grid of the full academic year, similar to a GitHub contribution graph. Each square is one day.</p>
+
+  <table>
+    <tr><th>Color</th><th>Meaning</th></tr>
+    <tr><td>Gray</td><td>No approved leave on this day</td></tr>
+    <tr><td>Light blue</td><td>1 professor on leave</td></tr>
+    <tr><td>Medium blue</td><td>2 professors on leave</td></tr>
+    <tr><td>Dark blue</td><td>3 professors on leave</td></tr>
+    <tr><td>Very dark blue</td><td>4 or more professors on leave</td></tr>
+  </table>
+
+  <p>Each square also shows the day number of the month (e.g. "14" for the 14th) so you can identify dates without hovering.</p>
+
+  <h4>Hover to see who is absent</h4>
+  <p>Hover over any day to see a details panel below the grid. It shows the full date, how many professors are on leave, and a card for each professor with their name and campus.</p>
+
+
+
+  <!-- ══════════════════════════════════════════
+       BY CAMPUS
+  ═══════════════════════════════════════════ -->
+  <h2 id="by-campus">By Campus Tab</h2>
+  <p>This tab shows a breakdown of approved leave statistics for each campus:</p>
+  <ul>
+    <li>Number of professors with approved leave from that campus</li>
+    <li>Total approved leave days for that campus</li>
+    <li>Busiest month (the month with the most leave days)</li>
+    <li>A list of <strong>Campus Overlap Days</strong> — specific dates where too many professors were absent at once, along with their names</li>
+    <li>A list of <strong>Department Overlap Days</strong> — same, but narrowed to a specific department (if enabled in settings)</li>
+  </ul>
+
+  <p>In the example below, viewing all professors across the campus shows <strong>5 conflict days</strong>:</p>
+  <img src="tutorial/bycampus-allprof.png" alt="By Campus — All Professors View" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:8px 0 20px;" />
+
+  <p>When the <strong>Department Overlap</strong> filter is applied, those same days may fall below the department threshold — showing <strong>no overlap</strong> at the department level:</p>
+  <img src="tutorial/bycampus-bydep.png" alt="By Campus — By Department View" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:8px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       BY PROFESSOR
+  ═══════════════════════════════════════════ -->
+  <h2 id="by-professor">By Professor Tab</h2>
+  <p>Lists every professor with approved leave, sorted by total days (highest first). Shows their name, campus, department, and day count. Expanding a row reveals all their specific leave dates.</p>
+
+  <!-- ══════════════════════════════════════════
+       EXPORT
+  ═══════════════════════════════════════════ -->
+  <h2 id="export">Exporting Data</h2>
+  <p>Admins can download leave data as Excel (<code>.xlsx</code>) files. Two formats are available from the Statistics page and the Submissions list.</p>
+
+  <h3>Export by Professor</h3>
+  <p>One sheet per professor. Each sheet lists that professor's approved leave dates. Useful for HR records organized by person.</p>
+
+  <h3>Export by Day</h3>
+  <p>A single sheet where each row is one date that has absences. The first column is the date, and the following columns are the names of professors on leave that day. Useful for daily scheduling and planning.</p>
+
+  <!-- ══════════════════════════════════════════
+       USERS
+  ═══════════════════════════════════════════ -->
+  <h2 id="users">Managing Users</h2>
+  <p>The Users page (<strong>Admin → Users</strong>) lists every registered user with their name, email, campus, department, and role.</p>
+
+  <h3>Role Badges</h3>
+  <ul>
+    <li><span class="role-badge role-prof">Professor</span> — default role for new users</li>
+    <li><span class="role-badge role-admin">Admin</span> — can access the admin panel</li>
+    <li><span class="role-badge role-super">Superadmin</span> — shown with a crown icon in violet</li>
+  </ul>
+
+  <h3>Changing a User's Role</h3>
+  <p>The last column of the table has action buttons that depend on your role:</p>
+
+  <table>
+    <tr>
+      <th>If you are an Admin, you can…</th>
+      <th>If you are Superadmin, you can also…</th>
+    </tr>
+    <tr>
+      <td>
+        Promote a Professor to Admin<br>
+        <small>(button: "Promote to Admin")</small>
+      </td>
+      <td>
+        Demote an Admin back to Professor<br>
+        <small>(button: "Demote to Professor")</small>
+      </td>
+    </tr>
+    <tr>
+      <td>—</td>
+      <td>
+        Transfer the superadmin role to any user<br>
+        <small>(violet button: "Transfer Superadmin")</small>
+      </td>
+    </tr>
+  </table>
+
+  <div class="info-box">
+    <p><strong>You cannot change your own role.</strong> Your row shows "cannot change own role" instead of action buttons.</p>
+  </div>
+
+  <img src="tutorial/users-page.png" alt="Users Table" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       SETTINGS
+  ═══════════════════════════════════════════ -->
+  <h2 id="settings">Settings</h2>
+  <p>The Settings page (<strong>Admin → Settings</strong>) has four sections.</p>
+
+  <h3>1. Submissions Toggle</h3>
+  <p>A global on/off switch that controls whether professors can submit new leave requests.</p>
+  <ul>
+    <li><strong>Open</strong> — professors see the date picker and can submit</li>
+    <li><strong>Closed</strong> — professors see a "Submissions Closed" message instead</li>
+  </ul>
+  <p>Typically, submissions are opened at the start of each academic year and closed once the submission deadline passes.</p>
+
+  <h3>2. Thresholds &amp; Limits</h3>
+  <p>Three configurable numbers that affect alerts and the date picker:</p>
+
+  <table>
+    <tr><th>Setting</th><th>Default</th><th>Effect</th></tr>
+    <tr>
+      <td>Max Leave Days per Professor</td>
+      <td>22</td>
+      <td>Professors cannot select more than this many days in the date picker</td>
+    </tr>
+    <tr>
+      <td>Campus Overlap Alert (≥)</td>
+      <td>3</td>
+      <td>A warning flag appears in the conflict analysis and statistics when this many professors from the same campus are absent on the same day</td>
+    </tr>
+    <tr>
+      <td>Department Overlap Alert (≥)</td>
+      <td>2</td>
+      <td>Same as campus overlap but scoped to one department. Can be switched on or off.</td>
+    </tr>
+  </table>
+
+  <p>After changing any of these values, click <strong>Save Settings</strong>.</p>
+
+  <h3>3. Holidays</h3>
+  <p>See the <a href="#holidays">Managing Holidays</a> section below.</p>
+
+  <h3>4. Danger Zone — Reset</h3>
+  <p>A "Reset Database" button at the bottom of the settings page deletes all users and leave requests after asking for confirmation. Campuses, departments, holidays, and settings are preserved. This is intended for clearing test data or resetting between academic years.</p>
+
+  <div class="danger-box">
+    <p><strong>This cannot be undone.</strong> All professors will need to sign in again and re-onboard after a reset.</p>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       HOLIDAYS
+  ═══════════════════════════════════════════ -->
+  <h2 id="holidays">Managing Holidays</h2>
+  <p>Holidays are dates that professors cannot select as leave days. Weekends are blocked automatically — this section is for adding public holidays, university closures, or any other non-working days.</p>
+
+  <h3>Adding a Holiday Manually</h3>
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Pick a date using the date input</strong>
+        <p>In the Holidays section of the Settings page.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Optionally type a label</strong>
+        <p>For example: "Eid Al-Adha" or "University Closure Day." The label is shown to professors when they hover over the grayed-out date.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Click "Add Holiday"</strong>
+        <p>The holiday appears in the list immediately and is blocked in the professor's date picker.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h3>Removing a Holiday</h3>
+  <p>Click the trash icon on the right side of any holiday in the list to remove it. The date becomes selectable again in the date picker immediately.</p>
+
+  <img src="tutorial/holidays-list.png" alt="Holiday List" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+
+  <!-- ══════════════════════════════════════════
+       CSV IMPORT
+  ═══════════════════════════════════════════ -->
+  <h2 id="csv-import">Importing Holidays from CSV</h2>
+  <p>Instead of adding holidays one by one, you can import the full LIU academic calendar in bulk from a CSV file.</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Click "Import from CSV"</strong>
+        <p>A file picker opens. Select the LIU academic calendar CSV file.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>A preview dialog opens</strong>
+        <p>The app automatically reads the CSV, detects the academic year, and lists every date entry it found. All entries are checked by default.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Uncheck any dates you don't want to import</strong>
+        <p>Use "Select all" and "Deselect all" links at the top for bulk selection. Each row shows the date and its label (e.g. "Winter Break").</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Click "Import X Holidays"</strong>
+        <p>Selected entries are saved. Dates that already exist are skipped automatically — no duplicates. A confirmation toast tells you how many new holidays were created.</p>
+      </div>
+    </li>
+  </ol>
+
+  <img src="tutorial/import-list.png" alt="CSV Import Preview Dialog" style="width:100%; border-radius:10px; border:1px solid #e2e8f0; margin:16px 0;" />
+
+  <div class="tip">
+    <p><strong>Supported formats:</strong> The CSV parser understands single dates ("September 1: First Day"), date ranges in the same month ("October 14-18: Mid-semester Break"), and cross-month ranges ("December 23-January 5: Winter Break").</p>
+  </div>
+
+
+  <hr class="divider" />
+
+  <!-- ══════════════════════════════════════════
+       SUPERADMIN
+  ═══════════════════════════════════════════ -->
+  <h2 id="superadmin">Superadmin Role</h2>
+  <p>The Superadmin is a special elevated admin. In addition to everything a regular admin can do, the Superadmin can:</p>
+  <ul>
+    <li>Demote other admins back to Professor</li>
+    <li>Transfer the Superadmin role to another user</li>
+  </ul>
+  <p>The Superadmin is identified in the Users table by a violet crown badge <span class="role-badge role-super">👑 Superadmin</span>. There is always exactly one Superadmin — the role cannot be duplicated.</p>
+
+
+  <!-- ══════════════════════════════════════════
+       TRANSFER
+  ═══════════════════════════════════════════ -->
+  <h2 id="transfer">Transferring the Superadmin Role</h2>
+  <p>When the current Superadmin wants to hand the role to someone else, they use the Transfer feature from the Users page.</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Go to Admin → Users</strong>
+        <p>Find the person you want to make the new Superadmin.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Click the violet "Transfer Superadmin" button</strong>
+        <p>A confirmation dialog appears: "Transfer Superadmin to [name]? They will become the new Superadmin. You will be demoted to Admin and signed out immediately."</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Confirm the transfer</strong>
+        <p>The target user is promoted and you are demoted at the same time — both changes happen together so there is never a moment with no Superadmin.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>You are automatically signed out</strong>
+        <p>After a brief moment, you are signed out and taken back to the sign-in page. Sign back in to continue using the app as a regular Admin.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="info-box">
+    <p><strong>Note to the new Superadmin:</strong> Sign out and sign back in to immediately see your updated role and crown icon. Otherwise the change takes effect automatically within 15 minutes.</p>
+  </div>
+
+  <div class="warning">
+    <p><strong>This action cannot be undone without the new Superadmin's cooperation.</strong> Only transfer the role to someone you fully trust, as they will immediately have full superadmin access.</p>
+  </div>
+
+
+  <!-- FOOTER -->
+  <hr class="divider" />
+  <p style="text-align:center; color: var(--muted); font-size: 13px;">
+    © 2025 BEEhivelab, School of Engineering — Lebanese International University
+  </p>
+
+</main>
+</body>
+</html>
