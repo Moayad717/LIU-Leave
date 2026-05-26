@@ -101,3 +101,25 @@ export async function updateUserRole(targetUserId: string, newRole: Role) {
     return { error: "Something went wrong. Please try again." }
   }
 }
+
+export async function transferSuperadmin(targetUserId: string) {
+  const session = await requireAdmin()
+
+  if (session!.user.role !== Role.SUPERADMIN) {
+    return { error: "Only the superadmin can transfer this role." }
+  }
+  if (targetUserId === session!.user.id) {
+    return { error: "You are already the superadmin." }
+  }
+
+  try {
+    await db.$transaction([
+      db.user.update({ where: { id: targetUserId }, data: { role: Role.SUPERADMIN } }),
+      db.user.update({ where: { id: session!.user.id }, data: { role: Role.ADMIN } }),
+    ])
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}

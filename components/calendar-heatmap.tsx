@@ -37,6 +37,12 @@ function getColor(count: number, selected: boolean) {
   return selected ? `${base} ring-2 ring-offset-1 ring-blue-900` : base
 }
 
+function getTextColor(count: number) {
+  if (count === 0) return "text-gray-400"
+  if (count === 1) return "text-blue-900"
+  return "text-white"
+}
+
 export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
@@ -81,7 +87,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
             {weeks.map((_, colIndex) => {
               const label = monthLabels.find((l) => l.colIndex === colIndex)
               return (
-                <div key={colIndex} className="w-4 mr-0.5 text-xs text-muted-foreground">
+                <div key={colIndex} className="w-5 mr-0.5 text-xs text-muted-foreground">
                   {label ? label.month : ""}
                 </div>
               )
@@ -91,7 +97,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
           <div className="flex gap-0">
             <div className="flex flex-col mr-1">
               {DAYS.map((day, i) => (
-                <div key={day} className="h-4 mb-0.5 text-xs text-muted-foreground text-right pr-1 leading-4 w-7">
+                <div key={day} className="h-5 mb-0.5 text-xs text-muted-foreground text-right pr-1 leading-5 w-7">
                   {i % 2 === 1 ? day.slice(0, 1) : ""}
                 </div>
               ))}
@@ -113,12 +119,18 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                       <div
                         key={key}
                         onMouseEnter={() => isInRange && setSelectedDay(key)}
-                        className={`w-4 h-4 rounded-sm transition-all ${
+                        className={`w-5 h-5 rounded-sm transition-all flex items-center justify-center ${
                           isInRange
                             ? `${getColor(count, isSelected)} cursor-default`
                             : "bg-transparent"
                         }`}
-                      />
+                      >
+                        {isInRange && (
+                          <span className={`text-[9px] font-semibold leading-none ${getTextColor(count)}`}>
+                            {day.getDate()}
+                          </span>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
@@ -129,7 +141,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
           <div className="flex items-center gap-1.5 mt-3 ml-8">
             <span className="text-xs text-muted-foreground">Less</span>
             {[0, 1, 2, 3, 4].map((v) => (
-              <div key={v} className={`w-4 h-4 rounded-sm ${getColor(v, false)}`} />
+              <div key={v} className={`w-5 h-5 rounded-sm ${getColor(v, false)}`} />
             ))}
             <span className="text-xs text-muted-foreground">More</span>
             {maxCount > 0 && (

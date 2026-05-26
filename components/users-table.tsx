@@ -118,7 +118,7 @@ export function UsersTable({ users, currentUserId, currentUserRole }: Props) {
                     {format(user.createdAt, "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
-                    <RoleToggle userId={user.id} currentRole={user.role} isSelf={isSelf} callerRole={currentUserRole} />
+                    <RoleToggle userId={user.id} userName={user.name ?? user.email ?? "User"} currentRole={user.role} isSelf={isSelf} callerRole={currentUserRole} />
                   </TableCell>
                 </TableRow>
               )

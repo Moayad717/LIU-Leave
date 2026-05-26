@@ -19,46 +19,37 @@ export async function GET() {
     orderBy: { submittedAt: "asc" },
   })
 
-  // Group rows by date
-  const byDate = new Map<string, { professor: string; email: string; campus: string; department: string }[]>()
+  // Group professor names by date
+  const byDate = new Map<string, string[]>()
 
   for (const req of requests) {
     const profName = req.professor.name ?? req.professor.email
     for (const date of req.dates) {
       const key = format(date, "yyyy-MM-dd")
       if (!byDate.has(key)) byDate.set(key, [])
-      byDate.get(key)!.push({
-        professor: profName,
-        email: req.professor.email,
-        campus: req.professor.campus?.name ?? "—",
-        department: req.professor.department?.name ?? "—",
-      })
+      byDate.get(key)!.push(profName)
     }
   }
 
-  // Sort dates, then professors within each date
   const sortedDates = Array.from(byDate.keys()).sort()
-  for (const rows of Array.from(byDate.values())) {
-    rows.sort((a, b) => a.professor.localeCompare(b.professor))
+  for (const names of Array.from(byDate.values())) {
+    names.sort((a, b) => a.localeCompare(b))
   }
+
+  // Build array-of-arrays: [date, name1, name2, ...]
+  const aoa: (string)[][] = sortedDates.map((key) => {
+    const label = format(new Date(key + "T00:00:00"), "MMM d, yyyy")
+    return [label, ...byDate.get(key)!]
+  })
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa)
+
+  // Date column fixed width, professor columns uniform
+  const maxProfs = Math.max(...sortedDates.map((k) => byDate.get(k)!.length))
+  ws["!cols"] = [{ wch: 16 }, ...Array(maxProfs).fill({ wch: 24 })]
 
   const wb = XLSX.utils.book_new()
-  const COL_WIDTHS = [{ wch: 25 }, { wch: 30 }, { wch: 18 }, { wch: 28 }]
-
-  for (const date of sortedDates) {
-    const rows = byDate.get(date)!
-    const sheetRows = rows.map((r) => ({
-      "Professor": r.professor,
-      "Email": r.email,
-      "Campus": r.campus,
-      "Department": r.department,
-    }))
-    const ws = XLSX.utils.json_to_sheet(sheetRows)
-    ws["!cols"] = COL_WIDTHS
-    // Sheet name: "Mon Jun 05" (Excel limit: 31 chars)
-    const sheetName = format(new Date(date + "T00:00:00"), "EEE MMM dd")
-    XLSX.utils.book_append_sheet(wb, ws, sheetName)
-  }
+  XLSX.utils.book_append_sheet(wb, ws, "Leave by Day")
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
   const filename = `liu-leave-by-day-${format(new Date(), "yyyy-MM-dd")}.xlsx`
