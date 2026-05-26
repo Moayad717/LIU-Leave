@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Role } from "@/types/enums"
 import { Button } from "@/components/ui/button"
 import { updateUserRole, transferSuperadmin } from "@/actions/admin"
@@ -26,6 +28,8 @@ interface Props {
 export function RoleToggle({ userId, userName, currentRole, isSelf, callerRole }: Props) {
   const [isPending, startTransition] = useTransition()
   const [transferOpen, setTransferOpen] = useState(false)
+  const router = useRouter()
+  const { update } = useSession()
 
   if (isSelf) {
     return <span className="text-xs text-muted-foreground italic">cannot change own role</span>
@@ -56,6 +60,9 @@ export function RoleToggle({ userId, userName, currentRole, isSelf, callerRole }
       if (result?.error) { toast.error(result.error); return }
       setTransferOpen(false)
       toast.success(`${userName} is now superadmin. You have been demoted to admin.`)
+      // Refresh JWT then re-render server components so stale role is cleared immediately
+      await update()
+      router.refresh()
     })
   }
 

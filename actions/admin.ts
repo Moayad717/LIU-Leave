@@ -105,14 +105,20 @@ export async function updateUserRole(targetUserId: string, newRole: Role) {
 export async function transferSuperadmin(targetUserId: string) {
   const session = await requireAdmin()
 
-  if (session!.user.role !== Role.SUPERADMIN) {
-    return { error: "Only the superadmin can transfer this role." }
-  }
   if (targetUserId === session!.user.id) {
     return { error: "You are already the superadmin." }
   }
 
   try {
+    // Always verify against DB — JWT may be stale after a previous transfer
+    const callerInDb = await db.user.findUnique({
+      where: { id: session!.user.id },
+      select: { role: true },
+    })
+    if (callerInDb?.role !== Role.SUPERADMIN) {
+      return { error: "Only the superadmin can transfer this role." }
+    }
+
     await db.$transaction([
       db.user.update({ where: { id: targetUserId }, data: { role: Role.SUPERADMIN } }),
       db.user.update({ where: { id: session!.user.id }, data: { role: Role.ADMIN } }),
