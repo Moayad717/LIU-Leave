@@ -114,11 +114,16 @@ export default async function SubmissionDetailPage({ params }: Props) {
 
   const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
 
+  // Terminal states are locked — no further review regardless of role
+  const isTerminal = req.status === LeaveStatus.APPROVED || req.status === LeaveStatus.REJECTED
+
   // Determine if the current user can review this request
   const canReview =
-    (canApproveStep1(role) && req.status === LeaveStatus.PENDING) ||
-    (canApproveStep2(role) && req.status === LeaveStatus.STEP1_APPROVED) ||
-    canBypassApproval(role)
+    !isTerminal && (
+      (canApproveStep1(role) && req.status === LeaveStatus.PENDING) ||
+      (canApproveStep2(role) && req.status === LeaveStatus.STEP1_APPROVED) ||
+      canBypassApproval(role)
+    )
 
   return (
     <div className="space-y-6 max-w-2xl">

@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/table"
 import { StatusBadge } from "@/components/status-badge"
 import { SubmissionsFilter } from "@/components/submissions-filter"
-import { QuickApproveButton } from "@/components/quick-approve-button"
 import { ChevronRight, ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 
@@ -100,14 +99,6 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     ).length,
     approved: requests.filter((r) => r.status === LeaveStatus.APPROVED).length,
     rejected: requests.filter((r) => rejectedStatuses.includes(r.status as never)).length,
-  }
-
-  // Which status can this role act on (for showing quick-approve button)
-  function canActOn(status: string): boolean {
-    if (canApproveStep1(role)) return status === LeaveStatus.PENDING
-    if (canApproveStep2(role)) return status === LeaveStatus.STEP1_APPROVED
-    if (canBypassApproval(role)) return true
-    return false
   }
 
   return (
@@ -194,16 +185,11 @@ export default async function SubmissionsPage({ searchParams }: Props) {
                       <StatusBadge status={req.status} />
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        {canActOn(req.status) && (
-                          <QuickApproveButton requestId={req.id} />
-                        )}
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/admin/submissions/${req.id}`}>
-                            <ChevronRight className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                      </div>
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/admin/submissions/${req.id}`}>
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

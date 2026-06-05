@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
   Select,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, X } from "lucide-react"
+import { Search, X, Loader2 } from "lucide-react"
 
 interface Campus {
   id: string
@@ -24,9 +24,20 @@ interface Props {
   currentStartYear: number
 }
 
+const STATUS_OPTIONS = [
+  { value: "PENDING",        label: "Awaiting Asst. Dean" },
+  { value: "STEP1_APPROVED", label: "Awaiting Chairman" },
+  { value: "STEP1_REJECTED", label: "Rejected (Step 1)" },
+  { value: "STEP2_APPROVED", label: "Awaiting Dean" },
+  { value: "STEP2_REJECTED", label: "Rejected (Step 2)" },
+  { value: "APPROVED",       label: "Approved" },
+  { value: "REJECTED",       label: "Rejected" },
+]
+
 export function SubmissionsFilter({ campuses, availableYears, currentStartYear }: Props) {
   const router = useRouter()
   const params = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   const campus = params.get("campus") ?? ""
   const status = params.get("status") ?? ""
@@ -37,7 +48,9 @@ export function SubmissionsFilter({ campuses, availableYears, currentStartYear }
     const next = new URLSearchParams(params.toString())
     if (value) next.set(key, value)
     else next.delete(key)
-    router.push(`/admin/submissions?${next.toString()}`)
+    startTransition(() => {
+      router.push(`/admin/submissions?${next.toString()}`)
+    })
   }
 
   useEffect(() => {
@@ -47,14 +60,16 @@ export function SubmissionsFilter({ campuses, availableYears, currentStartYear }
 
   const clear = () => {
     setSearch("")
-    router.push(`/admin/submissions?year=${currentStartYear}`)
+    startTransition(() => {
+      router.push(`/admin/submissions?year=${currentStartYear}`)
+    })
   }
 
   const hasFilters = !!campus || !!status || !!search || year !== String(currentStartYear)
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Select value={year} onValueChange={(v) => update("year", v)}>
+      <Select value={year} onValueChange={(v) => update("year", v)} disabled={isPending}>
         <SelectTrigger className="w-36">
           <SelectValue />
         </SelectTrigger>
@@ -74,36 +89,45 @@ export function SubmissionsFilter({ campuses, availableYears, currentStartYear }
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-8 w-52"
+          disabled={isPending}
         />
       </div>
 
-      <Select value={campus} onValueChange={(v) => update("campus", v === "all" ? "" : v)}>
+      {campuses.length > 0 && (
+        <Select value={campus} onValueChange={(v) => update("campus", v === "all" ? "" : v)} disabled={isPending}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All campuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All campuses</SelectItem>
+            {campuses.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      <Select value={status} onValueChange={(v) => update("status", v === "all" ? "" : v)} disabled={isPending}>
         <SelectTrigger className="w-44">
-          <SelectValue placeholder="All campuses" />
+          <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All campuses</SelectItem>
-          {campuses.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
+          <SelectItem value="all">All statuses</SelectItem>
+          {STATUS_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <Select value={status} onValueChange={(v) => update("status", v === "all" ? "" : v)}>
-        <SelectTrigger className="w-36">
-          <SelectValue placeholder="All statuses" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All statuses</SelectItem>
-          <SelectItem value="PENDING">Pending</SelectItem>
-          <SelectItem value="APPROVED">Approved</SelectItem>
-          <SelectItem value="REJECTED">Rejected</SelectItem>
-        </SelectContent>
-      </Select>
+      {isPending && (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      )}
 
-      {hasFilters && (
+      {!isPending && hasFilters && (
         <Button variant="ghost" size="sm" onClick={clear} className="gap-1 text-muted-foreground">
           <X className="w-3.5 h-3.5" />
           Clear

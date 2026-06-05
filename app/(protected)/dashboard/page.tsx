@@ -74,6 +74,14 @@ export default async function DashboardPage({ searchParams }: Props) {
   const usedDays = activeRequests.reduce((sum, r) => sum + r.dates.length, 0)
   const remainingDays = Math.max(0, maxLeaveDays - usedDays)
 
+  // Dates to mark in the picker (disabled + coloured)
+  const approvedDateISOs = leaveRequests
+    .filter((r) => r.status === "APPROVED")
+    .flatMap((r) => r.dates.map((d) => d.toISOString()))
+  const pendingDateISOs = leaveRequests
+    .filter((r) => ["PENDING", "STEP1_APPROVED", "STEP2_APPROVED"].includes(r.status))
+    .flatMap((r) => r.dates.map((d) => d.toISOString()))
+
   const canSubmitMore = submissionsOpen && remainingDays > 0
 
   return (
@@ -215,6 +223,8 @@ export default async function DashboardPage({ searchParams }: Props) {
                 endISO={end.toISOString()}
                 holidays={holidayISOs}
                 maxDays={remainingDays}
+                approvedDateISOs={approvedDateISOs}
+                pendingDateISOs={pendingDateISOs}
               />
             </>
           )}

@@ -22,37 +22,35 @@ import {
 } from "@/components/ui/dialog"
 import { SubmittedCalendar } from "@/components/submitted-calendar"
 
-interface RequestRow {
-  id: string
-  dates: Date[]
-  status: string
-  submittedAt: Date
-  professor: {
-    name: string | null
-    email: string
-    campus: { name: string } | null
-    department: { name: string } | null
-  }
+interface ProfEntry {
+  professorId: string
+  name: string | null
+  email: string
+  campus: { name: string } | null
+  department: { name: string } | null
+  totalDays: number
+  allDates: Date[]
+  requestCount: number
 }
 
-export function ProfsTable({ requests }: { requests: RequestRow[] }) {
+export function ProfsTable({ professors }: { professors: ProfEntry[] }) {
   const [search, setSearch] = useState("")
-  const [selected, setSelected] = useState<RequestRow | null>(null)
+  const [selected, setSelected] = useState<ProfEntry | null>(null)
 
   const filtered = search.trim()
-    ? requests.filter((r) => {
+    ? professors.filter((p) => {
         const q = search.toLowerCase()
         return (
-          r.professor.name?.toLowerCase().includes(q) ||
-          r.professor.email.toLowerCase().includes(q) ||
-          r.professor.campus?.name.toLowerCase().includes(q) ||
-          r.professor.department?.name.toLowerCase().includes(q)
+          p.name?.toLowerCase().includes(q) ||
+          p.email.toLowerCase().includes(q) ||
+          p.campus?.name.toLowerCase().includes(q) ||
+          p.department?.name.toLowerCase().includes(q)
         )
       })
-    : requests
+    : professors
 
   const sortedDates = selected
-    ? [...selected.dates].sort((a, b) => a.getTime() - b.getTime())
+    ? [...selected.allDates].sort((a, b) => a.getTime() - b.getTime())
     : []
 
   return (
@@ -79,29 +77,29 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
                 <TableHead>Professor</TableHead>
                 <TableHead>Campus</TableHead>
                 <TableHead>Department</TableHead>
-                <TableHead>Days</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
+                <TableHead>Total Days</TableHead>
+                <TableHead>Requests</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((req) => (
+              {filtered.map((prof) => (
                 <TableRow
-                  key={req.id}
+                  key={prof.professorId}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setSelected(req)}
+                  onClick={() => setSelected(prof)}
                 >
                   <TableCell className="font-medium">
-                    {req.professor.name ?? req.professor.email}
+                    {prof.name ?? prof.email}
                   </TableCell>
-                  <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
-                  <TableCell>{req.professor.department?.name ?? "—"}</TableCell>
-                  <TableCell>{req.dates.length}</TableCell>
+                  <TableCell>{prof.campus?.name ?? "—"}</TableCell>
+                  <TableCell>{prof.department?.name ?? "—"}</TableCell>
                   <TableCell>
-                    <StatusBadge status={req.status} />
+                    <span className="font-semibold">{prof.totalDays}</span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {format(req.submittedAt, "MMM d, yyyy")}
+                    {prof.requestCount === 1
+                      ? "1 request"
+                      : `${prof.requestCount} requests`}
                   </TableCell>
                 </TableRow>
               ))}
@@ -116,24 +114,28 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
             <>
               <DialogHeader>
                 <DialogTitle className="text-lg">
-                  {selected.professor.name ?? selected.professor.email}
+                  {selected.name ?? selected.email}
                 </DialogTitle>
               </DialogHeader>
 
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Building className="w-3.5 h-3.5" />
-                  {selected.professor.campus?.name ?? "No campus"}
+                  {selected.campus?.name ?? "No campus"}
                 </div>
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <User className="w-3.5 h-3.5" />
-                  {selected.professor.department?.name ?? "No department"}
+                  {selected.department?.name ?? "No department"}
                 </div>
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <CalendarDays className="w-3.5 h-3.5" />
-                  {selected.dates.length} days · submitted {format(selected.submittedAt, "MMM d, yyyy")}
+                  {selected.totalDays} approved day{selected.totalDays !== 1 ? "s" : ""}
+                  {selected.requestCount > 1 && (
+                    <span className="ml-1">
+                      across {selected.requestCount} requests
+                    </span>
+                  )}
                 </div>
-                <StatusBadge status={selected.status} />
               </div>
 
               <Separator />
@@ -143,7 +145,9 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
               <Separator />
 
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">All dates</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  All approved dates ({sortedDates.length})
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {sortedDates.map((date) => (
                     <Badge key={date.toISOString()} variant="secondary" className="text-xs font-normal">
@@ -158,10 +162,4 @@ export function ProfsTable({ requests }: { requests: RequestRow[] }) {
       </Dialog>
     </>
   )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === "APPROVED") return <Badge variant="success">Approved</Badge>
-  if (status === "REJECTED") return <Badge variant="destructive">Rejected</Badge>
-  return <Badge variant="warning">Pending</Badge>
 }

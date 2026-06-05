@@ -55,6 +55,11 @@ export async function reviewLeaveRequest(
     })
     if (!request) return { error: "Leave request not found." }
 
+    // Terminal states cannot be re-reviewed by anyone
+    if (request.status === LeaveStatus.APPROVED || request.status === LeaveStatus.REJECTED) {
+      return { error: "This request has already been finalised and cannot be changed." }
+    }
+
     // Scope enforcement
     if (role === Role.ASSISTANT_DEAN) {
       if (request.professor.campusId !== session!.user.campusId) {

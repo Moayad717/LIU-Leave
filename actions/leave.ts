@@ -49,6 +49,19 @@ export async function submitLeaveRequest(dates: string[]) {
       }
     }
 
+    // Block dates that already exist in another active request
+    const activeDateStrings = new Set(
+      activeRequests.flatMap((r) =>
+        r.dates.map((d) => d.toISOString().slice(0, 10))
+      )
+    )
+    const duplicates = dates.filter((d) => activeDateStrings.has(d))
+    if (duplicates.length > 0) {
+      return {
+        error: `${duplicates.length} date${duplicates.length !== 1 ? "s are" : " is"} already covered by an active request: ${duplicates.join(", ")}.`,
+      }
+    }
+
     await db.leaveRequest.create({
       data: { professorId: session.user.id, dates: parsedDates },
     })

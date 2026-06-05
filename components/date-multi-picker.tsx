@@ -22,6 +22,8 @@ interface Props {
   academicYearEnd: Date
   holidays?: Holiday[]
   blockedDates?: Date[]
+  approvedDates?: Date[]
+  pendingDates?: Date[]
   onSuccess: () => void
   maxDays?: number
 }
@@ -33,6 +35,8 @@ export function DateMultiPicker({
   academicYearEnd,
   holidays = [],
   blockedDates = [],
+  approvedDates = [],
+  pendingDates = [],
   onSuccess,
   maxDays = 22,
 }: Props) {
@@ -56,7 +60,9 @@ export function DateMultiPicker({
             d >= academicYearStart &&
             d <= academicYearEnd &&
             !holidayDates.some((h) => isSameDay(h, d)) &&
-            !blockedDates.some((b) => isSameDay(b, d))
+            !blockedDates.some((b) => isSameDay(b, d)) &&
+            !approvedDates.some((a) => isSameDay(a, d)) &&
+            !pendingDates.some((p) => isSameDay(p, d))
         )
       if (dates.length > 0) setSelected(dates)
     } catch {
@@ -103,6 +109,7 @@ export function DateMultiPicker({
         return
       }
       localStorage.removeItem(DRAFT_KEY)
+      setSelected([])
       toast.success("Leave request submitted successfully.")
       onSuccess()
     })
@@ -159,6 +166,8 @@ export function DateMultiPicker({
             { dayOfWeek: [0, 6] },
             ...holidayDates,
             ...blockedDates,
+            ...approvedDates,
+            ...pendingDates,
             ...(remaining === 0
               ? [(date: Date) => !selected.some((d) => isSameDay(d, date))]
               : []),
@@ -167,11 +176,15 @@ export function DateMultiPicker({
             holiday: holidayDates,
             weekend: { dayOfWeek: [0, 6] },
             blocked: blockedDates,
+            approvedDay: approvedDates,
+            pendingDay: pendingDates,
           }}
           modifiersStyles={{
-            holiday: { color: "#d97706", textDecoration: "line-through", opacity: 0.7 },
-            weekend: { opacity: 0.25 },
-            blocked: { color: "#9ca3af", textDecoration: "line-through", opacity: 0.5 },
+            holiday:    { color: "#d97706", textDecoration: "line-through", opacity: 0.7 },
+            weekend:    { opacity: 0.25 },
+            blocked:    { color: "#9ca3af", textDecoration: "line-through", opacity: 0.5 },
+            approvedDay: { backgroundColor: "#dcfce7", color: "#15803d", fontWeight: "600", opacity: 1, borderRadius: "0.5rem" },
+            pendingDay:  { backgroundColor: "#fef9c3", color: "#a16207", fontWeight: "600", opacity: 1, borderRadius: "0.5rem" },
           }}
           numberOfMonths={2}
           pagedNavigation
@@ -238,7 +251,19 @@ export function DateMultiPicker({
         </Card>
       )}
 
-      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+        {approvedDates.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-sm bg-green-200" />
+            <span className="text-green-700 font-medium">Approved leave</span>
+          </div>
+        )}
+        {pendingDates.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-sm bg-yellow-200" />
+            <span className="text-yellow-700 font-medium">Pending review</span>
+          </div>
+        )}
         {holidays.length > 0 && (
           <div className="flex flex-wrap gap-2 items-center">
             <span className="font-medium text-amber-600">Holidays:</span>

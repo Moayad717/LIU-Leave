@@ -1,14 +1,14 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { canManageUsers, type Role } from "@/types/enums"
+import { canAccessAdmin, canManageUsers, type Role } from "@/types/enums"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UsersTable } from "@/components/users-table"
 import { Users } from "lucide-react"
 
 export default async function UsersPage() {
   const session = await auth()
-  if (!session || !canManageUsers(session.user.role)) redirect("/admin")
+  if (!session || !canAccessAdmin(session.user.role)) redirect("/dashboard")
 
   const [users, campuses, departments] = await Promise.all([
     db.user.findMany({

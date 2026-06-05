@@ -27,7 +27,6 @@ import {
   CalendarDays,
   Users,
 } from "lucide-react"
-import { QuickApproveButton } from "@/components/quick-approve-button"
 
 export default async function AdminPage() {
   const session = await auth()
@@ -201,14 +200,11 @@ export default async function AdminPage() {
                         <StatusBadge status={req.status} />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <QuickApproveButton requestId={req.id} />
-                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-                            <Link href={`/admin/submissions/${req.id}`}>
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </Link>
-                          </Button>
-                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                          <Link href={`/admin/submissions/${req.id}`}>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

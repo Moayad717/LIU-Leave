@@ -8,41 +8,21 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum Role {
-  PROFESSOR
-  DEAN
-  COORDINATOR
-  ASSISTANT_DEAN
-  CHAIRMAN
-  SUPER_ADMIN
-}
-
-enum LeaveStatus {
-  PENDING
-  STEP1_APPROVED
-  STEP1_REJECTED
-  STEP2_APPROVED
-  STEP2_REJECTED
-  APPROVED
-  REJECTED
-}
-
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(PROFESSOR)
-  campusId      String?
-  campus        Campus?     @relation(fields: [campusId], references: [id])
-  departmentId  String?
-  department    Department? @relation(fields: [departmentId], references: [id])
-  createdAt     DateTime  @default(now())
-
+  id             String         @id @default(cuid())
+  name           String?
+  email          String         @unique
+  emailVerified  DateTime?
+  image          String?
+  role           Role           @default(PROFESSOR)
+  campusId       String?
+  departmentId   String?
+  createdAt      DateTime       @default(now())
   accounts       Account[]
   leaveRequests  LeaveRequest[] @relation("ProfessorLeaves")
   reviewedLeaves LeaveRequest[] @relation("ReviewedLeaves")
+  campus         Campus?        @relation(fields: [campusId], references: [id])
+  department     Department?    @relation(fields: [departmentId], references: [id])
 
   @@index([campusId])
   @@index([departmentId])
@@ -54,15 +34,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -80,13 +59,13 @@ model Department {
 }
 
 model AppSettings {
-  id                    String   @id @default("global")
-  submissionsOpen       Boolean  @default(true)
-  maxLeaveDays          Int      @default(22)
-  campusOverlapThreshold Int     @default(3)
-  deptOverlapEnabled    Boolean  @default(true)
-  deptOverlapThreshold  Int      @default(2)
-  updatedAt             DateTime @updatedAt
+  id                     String   @id @default("global")
+  submissionsOpen        Boolean  @default(true)
+  maxLeaveDays           Int      @default(22)
+  campusOverlapThreshold Int      @default(3)
+  deptOverlapEnabled     Boolean  @default(true)
+  deptOverlapThreshold   Int      @default(2)
+  updatedAt              DateTime @updatedAt
 }
 
 model Holiday {
@@ -101,16 +80,35 @@ model Holiday {
 model LeaveRequest {
   id           String      @id @default(cuid())
   professorId  String
-  professor    User        @relation("ProfessorLeaves", fields: [professorId], references: [id], onDelete: Cascade)
   dates        DateTime[]
   status       LeaveStatus @default(PENDING)
-  adminComment String?     @db.Text
+  adminComment String?
   submittedAt  DateTime    @default(now())
   reviewedAt   DateTime?
   reviewedById String?
+  professor    User        @relation("ProfessorLeaves", fields: [professorId], references: [id], onDelete: Cascade)
   reviewedBy   User?       @relation("ReviewedLeaves", fields: [reviewedById], references: [id])
 
   @@index([professorId])
   @@index([status])
   @@index([submittedAt])
+}
+
+enum Role {
+  PROFESSOR
+  DEAN
+  COORDINATOR
+  ASSISTANT_DEAN
+  CHAIRMAN
+  SUPER_ADMIN
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  STEP1_APPROVED
+  STEP1_REJECTED
+  STEP2_APPROVED
+  STEP2_REJECTED
 }

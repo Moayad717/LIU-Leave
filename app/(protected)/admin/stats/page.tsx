@@ -153,6 +153,40 @@ export default async function StatsPage({ searchParams }: Props) {
   })
   campusEntries.sort((a, b) => b.totalDays - a.totalDays)
 
+  // Group approved requests by professor (one entry per professor, dates merged)
+  function groupByProfessor(reqs: typeof approvedRequests) {
+    const map = new Map<string, {
+      professorId: string
+      name: string | null
+      email: string
+      campus: { name: string } | null
+      department: { name: string } | null
+      totalDays: number
+      allDates: Date[]
+      requestCount: number
+    }>()
+    for (const req of reqs) {
+      const pid = req.professorId
+      if (!map.has(pid)) {
+        map.set(pid, {
+          professorId: pid,
+          name: req.professor.name,
+          email: req.professor.email,
+          campus: req.professor.campus,
+          department: req.professor.department,
+          totalDays: 0,
+          allDates: [],
+          requestCount: 0,
+        })
+      }
+      const e = map.get(pid)!
+      e.totalDays += req.dates.length
+      e.allDates.push(...req.dates)
+      e.requestCount++
+    }
+    return Array.from(map.values()).sort((a, b) => b.totalDays - a.totalDays)
+  }
+
   const totalApprovedDays = approvedRequests.reduce((sum, r) => sum + r.dates.length, 0)
   const totalApprovedProfessors = new Set(approvedRequests.map((r) => r.professor.id)).size
   const totalCampusOverlapDays = campusEntries.reduce((sum, c) => sum + c.allOverlaps.length, 0)
@@ -268,7 +302,7 @@ export default async function StatsPage({ searchParams }: Props) {
               {approvedRequests.length === 0 ? (
                 <p className="p-6 text-center text-muted-foreground">No approved leave yet.</p>
               ) : (
-                <ProfsTable requests={approvedRequests} />
+                <ProfsTable professors={groupByProfessor(approvedRequests)} />
               )}
             </CardContent>
           </Card>

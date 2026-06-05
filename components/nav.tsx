@@ -32,6 +32,8 @@ const professorLinks = [
 const limitedAdminLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
+  { href: "/admin/stats", label: "Statistics", icon: BarChart3 },
+  { href: "/admin/users", label: "Users", icon: Users },
 ]
 
 const fullAdminLinks = [
