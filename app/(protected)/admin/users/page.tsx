@@ -1,19 +1,23 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { isAdmin, type Role } from "@/types/enums"
+import { canManageUsers, type Role } from "@/types/enums"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { UsersTable } from "@/components/users-table"
 import { Users } from "lucide-react"
 
 export default async function UsersPage() {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
+  if (!session || !canManageUsers(session.user.role)) redirect("/admin")
 
-  const users = await db.user.findMany({
-    include: { campus: true, department: true },
-    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-  })
+  const [users, campuses, departments] = await Promise.all([
+    db.user.findMany({
+      include: { campus: true, department: true },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+    }),
+    db.campus.findMany({ orderBy: { name: "asc" } }),
+    db.department.findMany({ orderBy: { name: "asc" } }),
+  ])
 
   return (
     <div className="space-y-6">
@@ -31,7 +35,13 @@ export default async function UsersPage() {
           <CardDescription>{users.length} users total</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <UsersTable users={users} currentUserId={session.user.id} currentUserRole={session.user.role as Role} />
+          <UsersTable
+            users={users}
+            currentUserId={session.user.id}
+            currentUserRole={session.user.role as Role}
+            campuses={campuses}
+            departments={departments}
+          />
         </CardContent>
       </Card>
     </div>

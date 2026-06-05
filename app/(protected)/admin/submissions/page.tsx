@@ -1,12 +1,17 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/types/enums"
+import {
+  canAccessAdmin,
+  canApproveStep1,
+  canApproveStep2,
+  canBypassApproval,
+  LeaveStatus,
+} from "@/types/enums"
 import Link from "next/link"
 import { format } from "date-fns"
 import { Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -17,24 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { StatusBadge } from "@/components/status-badge"
 import { SubmissionsFilter } from "@/components/submissions-filter"
 import { QuickApproveButton } from "@/components/quick-approve-button"
 import { ChevronRight, ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
-import type { LeaveStatus } from "@/types/enums"
-
-interface SubmissionRow {
-  id: string
-  dates: Date[]
-  status: string
-  submittedAt: Date
-  professor: {
-    name: string | null
-    email: string
-    campus: { name: string } | null
-    department: { name: string } | null
-  }
-}
 
 interface Props {
   searchParams: { campus?: string; status?: string; search?: string; year?: string }
@@ -42,14 +34,27 @@ interface Props {
 
 export default async function SubmissionsPage({ searchParams }: Props) {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
+  if (!session || !canAccessAdmin(session.user.role)) redirect("/dashboard")
 
+  const role = session.user.role
   const currentYear = getCurrentAcademicYear()
-  const selectedStartYear = searchParams.year ? parseInt(searchParams.year) : currentYear.start.getFullYear()
+  const selectedStartYear = searchParams.year
+    ? parseInt(searchParams.year)
+    : currentYear.start.getFullYear()
   const { start, end } = getAcademicYearFromStartYear(selectedStartYear)
 
-  const professorWhere: Record<string, unknown> = {}
-  if (searchParams.campus) professorWhere.campusId = searchParams.campus
+  // Scope filter based on role
+  const scopeFilter: Record<string, unknown> = {}
+  if (canApproveStep1(role) && session.user.campusId) {
+    scopeFilter.campusId = session.user.campusId
+  } else if (canApproveStep2(role) && session.user.departmentId) {
+    scopeFilter.departmentId = session.user.departmentId
+  }
+
+  const professorWhere: Record<string, unknown> = { ...scopeFilter }
+  if (searchParams.campus && canBypassApproval(role)) {
+    professorWhere.campusId = searchParams.campus
+  }
   if (searchParams.search) {
     professorWhere.OR = [
       { name: { contains: searchParams.search, mode: "insensitive" } },
@@ -63,7 +68,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
       where: {
         submittedAt: { gte: start, lte: end },
         ...(Object.keys(professorWhere).length > 0 ? { professor: professorWhere } : {}),
-        ...(searchParams.status ? { status: searchParams.status as LeaveStatus } : {}),
+        ...(searchParams.status ? { status: searchParams.status as never } : {}),
       },
       include: {
         professor: { include: { campus: true, department: true } },
@@ -75,7 +80,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
 
   const earliestYear = earliest
     ? getAcademicYearFromStartYear(
-        earliest.submittedAt.getMonth() >= 8
+        earliest.submittedAt.getMonth() >= 9
           ? earliest.submittedAt.getFullYear()
           : earliest.submittedAt.getFullYear() - 1
       ).start.getFullYear()
@@ -86,29 +91,43 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     availableYears.push(y)
   }
 
+  const rejectedStatuses = [LeaveStatus.REJECTED, LeaveStatus.STEP1_REJECTED, LeaveStatus.STEP2_REJECTED]
+
   const counts = {
     total: requests.length,
-    pending: requests.filter((r: { status: string }) => r.status === "PENDING").length,
-    approved: requests.filter((r: { status: string }) => r.status === "APPROVED").length,
-    rejected: requests.filter((r: { status: string }) => r.status === "REJECTED").length,
+    inProgress: requests.filter((r) =>
+      [LeaveStatus.PENDING, LeaveStatus.STEP1_APPROVED, LeaveStatus.STEP2_APPROVED].includes(r.status as never)
+    ).length,
+    approved: requests.filter((r) => r.status === LeaveStatus.APPROVED).length,
+    rejected: requests.filter((r) => rejectedStatuses.includes(r.status as never)).length,
+  }
+
+  // Which status can this role act on (for showing quick-approve button)
+  function canActOn(status: string): boolean {
+    if (canApproveStep1(role)) return status === LeaveStatus.PENDING
+    if (canApproveStep2(role)) return status === LeaveStatus.STEP1_APPROVED
+    if (canBypassApproval(role)) return true
+    return false
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Submissions</h1>
-        <Button variant="outline" size="sm" className="gap-1.5" asChild>
-          <a href="/api/admin/export" download>
-            <Download className="w-4 h-4" />
-            Export by Professor
-          </a>
-        </Button>
+        {canBypassApproval(role) && (
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <a href="/api/admin/export" download>
+              <Download className="w-4 h-4" />
+              Export by Professor
+            </a>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Total", value: counts.total, valueColor: "text-foreground", iconBg: "bg-muted", icon: ClipboardList, iconColor: "text-muted-foreground" },
-          { label: "Pending", value: counts.pending, valueColor: "text-amber-600", iconBg: "bg-amber-100", icon: Clock, iconColor: "text-amber-600" },
+          { label: "In Progress", value: counts.inProgress, valueColor: "text-amber-600", iconBg: "bg-amber-100", icon: Clock, iconColor: "text-amber-600" },
           { label: "Approved", value: counts.approved, valueColor: "text-green-600", iconBg: "bg-green-100", icon: CheckCircle2, iconColor: "text-green-600" },
           { label: "Rejected", value: counts.rejected, valueColor: "text-red-600", iconBg: "bg-red-100", icon: XCircle, iconColor: "text-red-600" },
         ].map(({ label, value, valueColor, iconBg, icon: Icon, iconColor }) => (
@@ -126,7 +145,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
 
       <Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-36" /><Skeleton className="h-10 w-52" /><Skeleton className="h-10 w-44" /><Skeleton className="h-10 w-36" /></div>}>
         <SubmissionsFilter
-          campuses={campuses}
+          campuses={canBypassApproval(role) ? campuses : []}
           availableYears={availableYears}
           currentStartYear={currentYear.start.getFullYear()}
         />
@@ -156,11 +175,11 @@ export default async function SubmissionsPage({ searchParams }: Props) {
                   <TableHead>Days</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-12" />
+                  <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(requests as SubmissionRow[]).map((req) => (
+                {requests.map((req) => (
                   <TableRow key={req.id}>
                     <TableCell className="font-medium">
                       {req.professor.name ?? req.professor.email}
@@ -176,7 +195,7 @@ export default async function SubmissionsPage({ searchParams }: Props) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {req.status === "PENDING" && (
+                        {canActOn(req.status) && (
                           <QuickApproveButton requestId={req.id} />
                         )}
                         <Button variant="ghost" size="icon" asChild>
@@ -195,10 +214,4 @@ export default async function SubmissionsPage({ searchParams }: Props) {
       </Card>
     </div>
   )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === "APPROVED") return <Badge variant="success">Approved</Badge>
-  if (status === "REJECTED") return <Badge variant="destructive">Rejected</Badge>
-  return <Badge variant="warning">Pending</Badge>
 }

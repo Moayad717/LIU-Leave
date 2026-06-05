@@ -14,7 +14,7 @@ export function QuickApproveButton({ requestId }: { requestId: string }) {
 
   const handleApprove = () => {
     startTransition(async () => {
-      const result = await reviewLeaveRequest(requestId, "APPROVED", "")
+      const result = await reviewLeaveRequest(requestId, "approve", "")
       if (result?.error) {
         toast.error(result.error)
         return

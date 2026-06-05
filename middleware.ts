@@ -1,7 +1,7 @@
 import NextAuth from "next-auth"
 import { authConfig } from "@/auth.config"
 import { NextResponse } from "next/server"
-import { isAdmin } from "@/types/enums"
+import { canAccessAdmin } from "@/types/enums"
 
 const { auth } = NextAuth(authConfig)
 
@@ -25,7 +25,7 @@ export default auth((req) => {
   }
 
   const user = session!.user
-  const userIsAdmin = isAdmin(user.role)
+  const userCanAdmin = canAccessAdmin(user.role)
   const hasOnboarded = !!user.campusId
 
   if (!hasOnboarded && nextUrl.pathname !== "/onboarding") {
@@ -36,7 +36,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/dashboard", nextUrl))
   }
 
-  if (nextUrl.pathname.startsWith("/admin") && !userIsAdmin) {
+  if (nextUrl.pathname.startsWith("/admin") && !userCanAdmin) {
     return NextResponse.redirect(new URL("/dashboard", nextUrl))
   }
 

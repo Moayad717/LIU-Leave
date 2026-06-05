@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { isAdmin, type Role } from "@/types/enums"
+import { canAccessAdmin, canManageUsers, getRoleLabel, type Role } from "@/types/enums"
 
 interface NavUser {
   name?: string | null
@@ -29,7 +29,12 @@ const professorLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ]
 
-const adminLinks = [
+const limitedAdminLinks = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
+]
+
+const fullAdminLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
   { href: "/admin/stats", label: "Statistics", icon: BarChart3 },
@@ -37,9 +42,15 @@ const adminLinks = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ]
 
+function getLinks(role: Role) {
+  if (!canAccessAdmin(role)) return professorLinks
+  if (canManageUsers(role)) return fullAdminLinks
+  return limitedAdminLinks
+}
+
 export function Nav({ user }: { user: NavUser }) {
   const pathname = usePathname()
-  const links = isAdmin(user.role) ? adminLinks : professorLinks
+  const links = getLinks(user.role)
 
   const initials = user.name
     ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
@@ -94,7 +105,7 @@ export function Nav({ user }: { user: NavUser }) {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{user.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user.role.toLowerCase()}</p>
+                  <p className="text-xs text-muted-foreground">{getRoleLabel(user.role)}</p>
                 </div>
               </DropdownMenuLabel>
 

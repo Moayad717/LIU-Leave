@@ -15,7 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { RoleToggle } from "@/components/role-toggle"
-import type { Role } from "@/types/enums"
+import { getRoleLabel, type Role } from "@/types/enums"
+
+interface Campus { id: string; name: string }
+interface Department { id: string; name: string }
 
 interface UserRow {
   id: string
@@ -32,9 +35,28 @@ interface Props {
   users: UserRow[]
   currentUserId: string
   currentUserRole: Role
+  campuses: Campus[]
+  departments: Department[]
 }
 
-export function UsersTable({ users, currentUserId, currentUserRole }: Props) {
+function RoleBadge({ role }: { role: Role }) {
+  switch (role) {
+    case "SUPER_ADMIN":
+      return <Badge className="bg-violet-600 hover:bg-violet-700">Super Admin</Badge>
+    case "DEAN":
+      return <Badge className="bg-blue-600 hover:bg-blue-700">Dean</Badge>
+    case "COORDINATOR":
+      return <Badge className="bg-teal-600 hover:bg-teal-700">Coordinator</Badge>
+    case "ASSISTANT_DEAN":
+      return <Badge className="bg-amber-600 hover:bg-amber-700">Asst. Dean</Badge>
+    case "CHAIRMAN":
+      return <Badge className="bg-orange-600 hover:bg-orange-700">Chairman</Badge>
+    default:
+      return <Badge variant="secondary">Professor</Badge>
+  }
+}
+
+export function UsersTable({ users, currentUserId, currentUserRole, campuses, departments }: Props) {
   const [search, setSearch] = useState("")
 
   const filtered = search.trim()
@@ -44,7 +66,8 @@ export function UsersTable({ users, currentUserId, currentUserRole }: Props) {
           u.name?.toLowerCase().includes(q) ||
           u.email?.toLowerCase().includes(q) ||
           u.campus?.name.toLowerCase().includes(q) ||
-          u.department?.name.toLowerCase().includes(q)
+          u.department?.name.toLowerCase().includes(q) ||
+          getRoleLabel(u.role).toLowerCase().includes(q)
         )
       })
     : users
@@ -54,7 +77,7 @@ export function UsersTable({ users, currentUserId, currentUserRole }: Props) {
       <div className="relative px-6 pt-2">
         <Search className="absolute left-9 top-4.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name, email, campus or department..."
+          placeholder="Search by name, email, campus, department or role..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-8 max-w-sm"
@@ -106,19 +129,21 @@ export function UsersTable({ users, currentUserId, currentUserRole }: Props) {
                   <TableCell>{user.campus?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>{user.department?.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>
-                    {user.role === "SUPERADMIN" ? (
-                      <Badge variant="default" className="bg-violet-600 hover:bg-violet-700">Superadmin</Badge>
-                    ) : user.role === "ADMIN" ? (
-                      <Badge variant="default">Admin</Badge>
-                    ) : (
-                      <Badge variant="secondary">Professor</Badge>
-                    )}
+                    <RoleBadge role={user.role} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {format(user.createdAt, "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
-                    <RoleToggle userId={user.id} userName={user.name ?? user.email ?? "User"} currentRole={user.role} isSelf={isSelf} callerRole={currentUserRole} />
+                    <RoleToggle
+                      userId={user.id}
+                      userName={user.name ?? user.email ?? "User"}
+                      currentRole={user.role}
+                      isSelf={isSelf}
+                      callerRole={currentUserRole}
+                      campuses={campuses}
+                      departments={departments}
+                    />
                   </TableCell>
                 </TableRow>
               )

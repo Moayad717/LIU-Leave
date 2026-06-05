@@ -2,13 +2,13 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/types/enums"
+import { canManageUsers } from "@/types/enums"
 import { revalidatePath } from "next/cache"
 
 // Auth guard outside try/catch
 async function requireAdmin() {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) throw new Error("Unauthorized")
+  if (!session || !canManageUsers(session.user.role)) throw new Error("Unauthorized")
 }
 
 export async function toggleSubmissions() {

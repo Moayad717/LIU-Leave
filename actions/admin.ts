@@ -2,17 +2,35 @@
 
 import { auth, signOut } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isAdmin, LeaveStatus, Role } from "@/types/enums"
+import {
+  canAccessAdmin,
+  canManageUsers,
+  canAssignRole,
+  canBypassApproval,
+  Role,
+  LeaveStatus,
+} from "@/types/enums"
 import { revalidatePath } from "next/cache"
 
-// Auth guard kept separate so signOut's internal redirect() is never inside a try/catch
-async function requireAdmin() {
+// Auth guard for any admin-capable role (ASSISTANT_DEAN, CHAIRMAN, DEAN, COORDINATOR, SUPER_ADMIN)
+async function requireApprover() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Not authenticated.")
-  if (!isAdmin(session.user.role)) throw new Error("Admin access required.")
+  if (!canAccessAdmin(session.user.role)) throw new Error("Access required.")
 
   const user = await db.user.findUnique({ where: { id: session.user.id } })
-  // signOut calls redirect() internally — must not be inside any try/catch
+  if (!user) return await signOut({ redirectTo: "/auth/signin" })
+
+  return session
+}
+
+// Auth guard restricted to DEAN / COORDINATOR / SUPER_ADMIN
+async function requireHighAuthority() {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Not authenticated.")
+  if (!canManageUsers(session.user.role)) throw new Error("Insufficient permissions.")
+
+  const user = await db.user.findUnique({ where: { id: session.user.id } })
   if (!user) return await signOut({ redirectTo: "/auth/signin" })
 
   return session
@@ -20,27 +38,57 @@ async function requireAdmin() {
 
 export async function reviewLeaveRequest(
   requestId: string,
-  action: "APPROVED" | "REJECTED",
+  action: "approve" | "reject",
   comment: string
 ) {
-  // requireAdmin is outside try/catch so its signOut redirect propagates correctly
-  const session = await requireAdmin()
+  const session = await requireApprover()
+  const role = session!.user.role
 
-  if (action === "REJECTED" && !comment.trim()) {
+  if (action === "reject" && !comment.trim()) {
     return { error: "A comment is required when rejecting a request." }
   }
 
   try {
-    const request = await db.leaveRequest.findUnique({ where: { id: requestId } })
+    const request = await db.leaveRequest.findUnique({
+      where: { id: requestId },
+      include: { professor: { select: { campusId: true, departmentId: true } } },
+    })
     if (!request) return { error: "Leave request not found." }
-    if (request.status !== LeaveStatus.PENDING) {
-      return { error: "This request has already been reviewed." }
+
+    // Scope enforcement
+    if (role === Role.ASSISTANT_DEAN) {
+      if (request.professor.campusId !== session!.user.campusId) {
+        return { error: "This request is outside your campus scope." }
+      }
+      if (request.status !== LeaveStatus.PENDING) {
+        return { error: "You can only review requests with Pending status." }
+      }
+    } else if (role === Role.CHAIRMAN) {
+      if (request.professor.departmentId !== session!.user.departmentId) {
+        return { error: "This request is outside your department scope." }
+      }
+      if (request.status !== LeaveStatus.STEP1_APPROVED) {
+        return { error: "You can only review requests awaiting Chairman approval." }
+      }
+    } else if (!canBypassApproval(role)) {
+      return { error: "You do not have permission to review requests." }
+    }
+
+    // Determine new status
+    let newStatus: string
+    if (role === Role.ASSISTANT_DEAN) {
+      newStatus = action === "approve" ? LeaveStatus.STEP1_APPROVED : LeaveStatus.STEP1_REJECTED
+    } else if (role === Role.CHAIRMAN) {
+      newStatus = action === "approve" ? LeaveStatus.STEP2_APPROVED : LeaveStatus.STEP2_REJECTED
+    } else {
+      // DEAN / COORDINATOR / SUPER_ADMIN — always final outcome
+      newStatus = action === "approve" ? LeaveStatus.APPROVED : LeaveStatus.REJECTED
     }
 
     await db.leaveRequest.update({
       where: { id: requestId },
       data: {
-        status: action,
+        status: newStatus as never,
         adminComment: comment.trim() || null,
         reviewedAt: new Date(),
         reviewedById: session!.user.id,
@@ -59,7 +107,7 @@ export async function reviewLeaveRequest(
 }
 
 export async function deleteLeaveRequest(requestId: string) {
-  await requireAdmin()
+  await requireHighAuthority()
 
   try {
     await db.leaveRequest.delete({ where: { id: requestId } })
@@ -72,8 +120,13 @@ export async function deleteLeaveRequest(requestId: string) {
   }
 }
 
-export async function updateUserRole(targetUserId: string, newRole: Role) {
-  const session = await requireAdmin()
+export async function updateUserRole(
+  targetUserId: string,
+  newRole: Role,
+  campusId?: string | null,
+  departmentId?: string | null
+) {
+  const session = await requireApprover()
 
   if (targetUserId === session!.user.id) {
     return { error: "You cannot change your own role." }
@@ -84,17 +137,24 @@ export async function updateUserRole(targetUserId: string, newRole: Role) {
     if (!target) return { error: "User not found." }
 
     const callerRole = session!.user.role
-    const targetRole = target.role as Role
 
-    // Only SUPERADMIN can touch other admins or assign SUPERADMIN
-    if (targetRole !== Role.PROFESSOR && callerRole !== Role.SUPERADMIN) {
-      return { error: "Only the superadmin can demote admins." }
+    if (!canAssignRole(callerRole, newRole)) {
+      return { error: "You do not have permission to assign this role." }
     }
-    if (newRole === Role.SUPERADMIN && callerRole !== Role.SUPERADMIN) {
-      return { error: "Only the superadmin can assign the superadmin role." }
+    // Also check that the caller can demote from the target's current role
+    if (!canAssignRole(callerRole, target.role)) {
+      return { error: "You do not have permission to change this user's role." }
     }
 
-    await db.user.update({ where: { id: targetUserId }, data: { role: newRole } })
+    const updateData: Record<string, unknown> = { role: newRole }
+    if (newRole === Role.ASSISTANT_DEAN && campusId !== undefined) {
+      updateData.campusId = campusId
+    }
+    if (newRole === Role.CHAIRMAN && departmentId !== undefined) {
+      updateData.departmentId = departmentId
+    }
+
+    await db.user.update({ where: { id: targetUserId }, data: updateData as never })
     revalidatePath("/admin/users")
     return { success: true }
   } catch {
@@ -103,10 +163,10 @@ export async function updateUserRole(targetUserId: string, newRole: Role) {
 }
 
 export async function transferSuperadmin(targetUserId: string) {
-  const session = await requireAdmin()
+  const session = await requireApprover()
 
   if (targetUserId === session!.user.id) {
-    return { error: "You are already the superadmin." }
+    return { error: "You are already the super admin." }
   }
 
   try {
@@ -115,13 +175,13 @@ export async function transferSuperadmin(targetUserId: string) {
       where: { id: session!.user.id },
       select: { role: true },
     })
-    if (callerInDb?.role !== Role.SUPERADMIN) {
-      return { error: "Only the superadmin can transfer this role." }
+    if (callerInDb?.role !== Role.SUPER_ADMIN) {
+      return { error: "Only the super admin can transfer this role." }
     }
 
     await db.$transaction([
-      db.user.update({ where: { id: targetUserId }, data: { role: Role.SUPERADMIN } }),
-      db.user.update({ where: { id: session!.user.id }, data: { role: Role.ADMIN } }),
+      db.user.update({ where: { id: targetUserId }, data: { role: Role.SUPER_ADMIN } }),
+      db.user.update({ where: { id: session!.user.id }, data: { role: Role.DEAN } }),
     ])
     revalidatePath("/admin/users")
     return { success: true }

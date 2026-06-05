@@ -12,6 +12,7 @@ export const authConfig = {
       session.user.id = token.id as string
       session.user.role = token.role as Role
       session.user.campusId = (token.campusId as string | null) ?? null
+      session.user.departmentId = (token.departmentId as string | null) ?? null
       return session
     },
   },

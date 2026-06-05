@@ -1,11 +1,18 @@
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/types/enums"
+import {
+  canAccessAdmin,
+  canApproveStep1,
+  canApproveStep2,
+  canBypassApproval,
+  canManageUsers,
+  LeaveStatus,
+  type Role,
+} from "@/types/enums"
 import { format } from "date-fns"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -15,6 +22,7 @@ import type { DateConflict } from "@/components/conflict-panel"
 import { SubmittedCalendar } from "@/components/submitted-calendar"
 import { PrintButton } from "@/components/print-button"
 import { DeleteRequestButton } from "@/components/delete-request-button"
+import { StatusBadge } from "@/components/status-badge"
 import {
   ArrowLeft,
   CalendarDays,
@@ -22,7 +30,6 @@ import {
   Building,
   Clock,
   CheckCircle2,
-  XCircle,
   MessageSquare,
   ShieldAlert,
 } from "lucide-react"
@@ -33,7 +40,9 @@ interface Props {
 
 export default async function SubmissionDetailPage({ params }: Props) {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
+  if (!session || !canAccessAdmin(session.user.role)) redirect("/dashboard")
+
+  const role = session.user.role as Role
 
   const [req, appSettings] = await Promise.all([
     db.leaveRequest.findUnique({
@@ -48,16 +57,23 @@ export default async function SubmissionDetailPage({ params }: Props) {
 
   if (!req) notFound()
 
+  // Scope enforcement: ASSISTANT_DEAN sees only their campus, CHAIRMAN only their dept
+  if (canApproveStep1(role) && req.professor.campusId !== session.user.campusId) {
+    redirect("/admin/submissions")
+  }
+  if (canApproveStep2(role) && req.professor.departmentId !== session.user.departmentId) {
+    redirect("/admin/submissions")
+  }
+
   const campusThreshold = appSettings?.campusOverlapThreshold ?? 3
   const deptThreshold = appSettings?.deptOverlapThreshold ?? 2
   const deptEnabled = appSettings?.deptOverlapEnabled ?? true
 
-  // Fetch all other approved requests on the same campus to compute conflicts
   const conflicts: DateConflict[] = []
   if (req.professor.campusId) {
     const campusApproved = await db.leaveRequest.findMany({
       where: {
-        status: "APPROVED",
+        status: LeaveStatus.APPROVED,
         id: { not: req.id },
         professor: { campusId: req.professor.campusId },
       },
@@ -97,7 +113,12 @@ export default async function SubmissionDetailPage({ params }: Props) {
   }
 
   const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
-  const isPending = req.status === "PENDING"
+
+  // Determine if the current user can review this request
+  const canReview =
+    (canApproveStep1(role) && req.status === LeaveStatus.PENDING) ||
+    (canApproveStep2(role) && req.status === LeaveStatus.STEP1_APPROVED) ||
+    canBypassApproval(role)
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -114,7 +135,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <DeleteRequestButton requestId={req.id} />
+          {canManageUsers(role) && <DeleteRequestButton requestId={req.id} />}
           <PrintButton />
         </div>
       </div>
@@ -140,7 +161,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
           {req.reviewedAt && (
             <InfoRow
               icon={CheckCircle2}
-              label="Reviewed"
+              label="Last reviewed"
               value={`${format(req.reviewedAt, "MMMM d, yyyy")} by ${req.reviewedBy?.name ?? req.reviewedBy?.email ?? "unknown"}`}
             />
           )}
@@ -148,9 +169,9 @@ export default async function SubmissionDetailPage({ params }: Props) {
       </Card>
 
       {req.adminComment && (
-        <Alert variant={req.status === "REJECTED" ? "destructive" : "success"}>
+        <Alert variant={["REJECTED", "STEP1_REJECTED", "STEP2_REJECTED"].includes(req.status) ? "destructive" : "default"}>
           <MessageSquare className="h-4 w-4" />
-          <AlertTitle>Admin Comment</AlertTitle>
+          <AlertTitle>Reviewer Comment</AlertTitle>
           <AlertDescription>{req.adminComment}</AlertDescription>
         </Alert>
       )}
@@ -163,9 +184,9 @@ export default async function SubmissionDetailPage({ params }: Props) {
         <CardContent className="space-y-6">
           <div className="flex flex-wrap gap-2">
             {sortedDates.map((date) => (
-              <Badge key={date.toISOString()} variant="secondary" className="text-xs font-normal">
+              <div key={date.toISOString()} className="px-2.5 py-1 rounded-md bg-muted text-xs font-medium">
                 {format(date, "EEE, MMM d, yyyy")}
-              </Badge>
+              </div>
             ))}
           </div>
           <Separator />
@@ -197,7 +218,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
         </Card>
       )}
 
-      {isPending && (
+      {canReview && (
         <>
           <Separator />
           <Card className="border-2 border-dashed">
@@ -211,6 +232,8 @@ export default async function SubmissionDetailPage({ params }: Props) {
               <ReviewForm
                 requestId={req.id}
                 dates={sortedDates.map((d) => d.toISOString())}
+                callerRole={role}
+                requestStatus={req.status}
               />
             </CardContent>
           </Card>
@@ -238,10 +261,4 @@ function InfoRow({
       </div>
     </div>
   )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === "APPROVED") return <Badge variant="success" className="gap-1"><CheckCircle2 className="w-3 h-3" /> Approved</Badge>
-  if (status === "REJECTED") return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Rejected</Badge>
-  return <Badge variant="warning" className="gap-1"><Clock className="w-3 h-3" /> Pending</Badge>
 }

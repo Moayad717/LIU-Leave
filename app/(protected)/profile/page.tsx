@@ -49,8 +49,8 @@ export default async function ProfilePage() {
             <div className="space-y-1 min-w-0">
               <p className="font-semibold truncate">{user.name ?? "—"}</p>
               <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-              <Badge variant={user.role === "ADMIN" ? "default" : "secondary"} className="text-xs capitalize">
-                {user.role.toLowerCase()}
+              <Badge variant={user.role === "PROFESSOR" ? "secondary" : "default"} className="text-xs capitalize">
+                {user.role.replace(/_/g, " ").toLowerCase()}
               </Badge>
             </div>
           </div>

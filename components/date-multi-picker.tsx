@@ -21,13 +21,21 @@ interface Props {
   academicYearStart: Date
   academicYearEnd: Date
   holidays?: Holiday[]
+  blockedDates?: Date[]
   onSuccess: () => void
   maxDays?: number
 }
 
 const DRAFT_KEY = "liu-leave-draft"
 
-export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays = [], onSuccess, maxDays = 22 }: Props) {
+export function DateMultiPicker({
+  academicYearStart,
+  academicYearEnd,
+  holidays = [],
+  blockedDates = [],
+  onSuccess,
+  maxDays = 22,
+}: Props) {
   const MAX_DAYS = maxDays
   const [selected, setSelected] = useState<Date[]>([])
   const [isPending, startTransition] = useTransition()
@@ -47,7 +55,8 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
             !isNaN(d.getTime()) &&
             d >= academicYearStart &&
             d <= academicYearEnd &&
-            !holidayDates.some((h) => isSameDay(h, d))
+            !holidayDates.some((h) => isSameDay(h, d)) &&
+            !blockedDates.some((b) => isSameDay(b, d))
         )
       if (dates.length > 0) setSelected(dates)
     } catch {
@@ -149,14 +158,20 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
             { after: academicYearEnd },
             { dayOfWeek: [0, 6] },
             ...holidayDates,
+            ...blockedDates,
             ...(remaining === 0
               ? [(date: Date) => !selected.some((d) => isSameDay(d, date))]
               : []),
           ]}
-          modifiers={{ holiday: holidayDates, weekend: { dayOfWeek: [0, 6] } }}
+          modifiers={{
+            holiday: holidayDates,
+            weekend: { dayOfWeek: [0, 6] },
+            blocked: blockedDates,
+          }}
           modifiersStyles={{
             holiday: { color: "#d97706", textDecoration: "line-through", opacity: 0.7 },
             weekend: { opacity: 0.25 },
+            blocked: { color: "#9ca3af", textDecoration: "line-through", opacity: 0.5 },
           }}
           numberOfMonths={2}
           pagedNavigation
@@ -223,16 +238,24 @@ export function DateMultiPicker({ academicYearStart, academicYearEnd, holidays =
         </Card>
       )}
 
-      {holidays.length > 0 && (
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-amber-600">Holidays:</span>
-          {holidays.map((h) => (
-            <span key={h.iso} className="text-amber-600/80">
-              {format(parseDate(h.iso), "MMM d")}{h.label ? ` — ${h.label}` : ""}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        {holidays.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="font-medium text-amber-600">Holidays:</span>
+            {holidays.map((h) => (
+              <span key={h.iso} className="text-amber-600/80">
+                {format(parseDate(h.iso), "MMM d")}{h.label ? ` — ${h.label}` : ""}
+              </span>
+            ))}
+          </div>
+        )}
+        {blockedDates.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-sm bg-gray-300 opacity-70" />
+            <span className="text-gray-500">Sep 16–30: Academic year closing period</span>
+          </div>
+        )}
+      </div>
 
       <Button
         onClick={handleSubmit}

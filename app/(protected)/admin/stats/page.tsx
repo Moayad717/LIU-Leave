@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/types/enums"
+import { canAccessAdmin } from "@/types/enums"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 import { format, getMonth } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +25,7 @@ interface Props {
 
 export default async function StatsPage({ searchParams }: Props) {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
+  if (!session || !canAccessAdmin(session.user.role)) redirect("/dashboard")
 
   const currentYear = getCurrentAcademicYear()
   const selectedStartYear = searchParams.year ? parseInt(searchParams.year) : currentYear.start.getFullYear()
@@ -43,7 +43,7 @@ export default async function StatsPage({ searchParams }: Props) {
 
   const earliestYear = earliest
     ? getAcademicYearFromStartYear(
-        earliest.submittedAt.getMonth() >= 8
+        earliest.submittedAt.getMonth() >= 9
           ? earliest.submittedAt.getFullYear()
           : earliest.submittedAt.getFullYear() - 1
       ).start.getFullYear()

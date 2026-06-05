@@ -7,22 +7,41 @@ import { parseDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { CheckCircle2, XCircle } from "lucide-react"
+import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import { reviewLeaveRequest } from "@/actions/admin"
 import { toast } from "sonner"
+import {
+  canApproveStep1,
+  canApproveStep2,
+  canBypassApproval,
+  LeaveStatus,
+  type Role,
+} from "@/types/enums"
 
 interface Props {
   requestId: string
-  dates: string[] // ISO strings, sorted ascending
+  dates: string[]
+  callerRole: Role
+  requestStatus: string
 }
 
-export function ReviewForm({ requestId, dates }: Props) {
+function getStepLabel(callerRole: Role, requestStatus: string): string {
+  if (canApproveStep1(callerRole)) return "Step 1 Review — Assistant Dean"
+  if (canApproveStep2(callerRole)) return "Step 2 Review — Chairman"
+  if (requestStatus === LeaveStatus.STEP2_APPROVED) return "Step 3 Review — Final Approval"
+  return "Override Review — Bypass Approval Chain"
+}
+
+export function ReviewForm({ requestId, dates, callerRole, requestStatus }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [pendingAction, setPendingAction] = useState<"APPROVED" | "REJECTED" | null>(null)
+  const [pendingAction, setPendingAction] = useState<"approve" | "reject" | null>(null)
   const [showRejectPanel, setShowRejectPanel] = useState(false)
   const [flagged, setFlagged] = useState<Set<string>>(new Set(dates))
   const [note, setNote] = useState("")
+
+  const isBypass =
+    canBypassApproval(callerRole) && requestStatus !== LeaveStatus.STEP2_APPROVED
 
   const toggleDate = (iso: string) =>
     setFlagged((prev) => {
@@ -43,9 +62,9 @@ export function ReviewForm({ requestId, dates }: Props) {
   }
 
   const handleApprove = (comment: string) => {
-    setPendingAction("APPROVED")
+    setPendingAction("approve")
     startTransition(async () => {
-      const result = await reviewLeaveRequest(requestId, "APPROVED", comment)
+      const result = await reviewLeaveRequest(requestId, "approve", comment)
       if (result?.error) { toast.error(result.error); setPendingAction(null); return }
       toast.success("Request approved.")
       router.refresh()
@@ -58,25 +77,34 @@ export function ReviewForm({ requestId, dates }: Props) {
       toast.error("Select at least one conflicting date or add a note.")
       return
     }
-    setPendingAction("REJECTED")
+    setPendingAction("reject")
     startTransition(async () => {
-      const result = await reviewLeaveRequest(requestId, "REJECTED", comment)
+      const result = await reviewLeaveRequest(requestId, "reject", comment)
       if (result?.error) { toast.error(result.error); setPendingAction(null); return }
       toast.success("Request rejected.")
       router.refresh()
     })
   }
 
+  const stepLabel = getStepLabel(callerRole, requestStatus)
+
   if (!showRejectPanel) {
     return (
       <div className="space-y-4">
+        {isBypass && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <p>This request has not completed the normal approval chain. You are bypassing it with your authority as {callerRole.replace("_", " ").toLowerCase()}.</p>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{stepLabel}</p>
         <div className="space-y-2">
           <Label htmlFor="approve-comment">
             Comment <span className="text-muted-foreground font-normal">(optional)</span>
           </Label>
           <Textarea
             id="approve-comment"
-            placeholder="Add a note for the professor..."
+            placeholder="Add a note..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
@@ -90,7 +118,7 @@ export function ReviewForm({ requestId, dates }: Props) {
             disabled={isPending}
           >
             <CheckCircle2 className="w-4 h-4" />
-            {pendingAction === "APPROVED" ? "Approving..." : "Approve"}
+            {pendingAction === "approve" ? "Approving..." : isBypass ? "Override & Approve" : "Approve"}
           </Button>
           <Button
             variant="outline"
@@ -99,7 +127,7 @@ export function ReviewForm({ requestId, dates }: Props) {
             disabled={isPending}
           >
             <XCircle className="w-4 h-4" />
-            Reject…
+            {isBypass ? "Override & Reject…" : "Reject…"}
           </Button>
         </div>
       </div>
@@ -110,6 +138,7 @@ export function ReviewForm({ requestId, dates }: Props) {
 
   return (
     <div className="space-y-4 rounded-lg border border-red-200 bg-red-50/60 p-4">
+      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{stepLabel}</p>
       <div>
         <p className="text-sm font-medium text-red-900 mb-1">Flag conflicting dates</p>
         <p className="text-xs text-red-500 mb-3">
@@ -182,7 +211,7 @@ export function ReviewForm({ requestId, dates }: Props) {
           disabled={isPending || !preview}
         >
           <XCircle className="w-4 h-4" />
-          {pendingAction === "REJECTED" ? "Rejecting…" : "Confirm Rejection"}
+          {pendingAction === "reject" ? "Rejecting…" : "Confirm Rejection"}
         </Button>
         <Button
           variant="ghost"

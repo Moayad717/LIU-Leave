@@ -2,10 +2,9 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { getCurrentAcademicYear } from "@/lib/academic-year"
+import { getCurrentAcademicYear, isBlockedDate } from "@/lib/academic-year"
 
 export async function submitLeaveRequest(dates: string[]) {
-  // Auth guard outside try/catch — redirect() must never be caught
   const session = await auth()
   if (!session?.user?.id) return { error: "Not authenticated." }
 
@@ -15,20 +14,7 @@ export async function submitLeaveRequest(dates: string[]) {
     const appSettings = await db.appSettings.findUnique({ where: { id: "global" } })
     const maxDays = appSettings?.maxLeaveDays ?? 22
 
-    if (dates.length > maxDays) return { error: `Maximum ${maxDays} days allowed.` }
-
     const { start, end } = getCurrentAcademicYear()
-
-    const existing = await db.leaveRequest.findFirst({
-      where: {
-        professorId: session.user.id,
-        submittedAt: { gte: start, lte: end },
-        status: { in: ["PENDING", "APPROVED"] },
-      },
-    })
-    if (existing) {
-      return { error: "You already have an active leave request for this academic year." }
-    }
 
     const parsedDates = dates.map((d) => new Date(d))
     if (parsedDates.some((d) => isNaN(d.getTime()))) {
@@ -36,6 +22,31 @@ export async function submitLeaveRequest(dates: string[]) {
     }
     if (parsedDates.some((d) => d < start || d > end)) {
       return { error: "All selected dates must fall within the current academic year." }
+    }
+
+    // Block Sep 16-30 (academic year closing period)
+    if (parsedDates.some((d) => isBlockedDate(d))) {
+      return { error: "Dates between September 16–30 are blocked (academic year closing period)." }
+    }
+
+    // Count days already used in active (non-rejected) requests this academic year
+    const activeRequests = await db.leaveRequest.findMany({
+      where: {
+        professorId: session.user.id,
+        submittedAt: { gte: start, lte: end },
+        status: { notIn: ["STEP1_REJECTED", "STEP2_REJECTED", "REJECTED"] as never[] },
+      },
+      select: { dates: true },
+    })
+    const usedDays = activeRequests.reduce((sum, r) => sum + r.dates.length, 0)
+
+    if (usedDays + dates.length > maxDays) {
+      const remaining = maxDays - usedDays
+      return {
+        error: remaining <= 0
+          ? `You have used all ${maxDays} leave days for this academic year.`
+          : `You can only request ${remaining} more day${remaining !== 1 ? "s" : ""} (${maxDays} day cap, ${usedDays} already used).`,
+      }
     }
 
     await db.leaveRequest.create({

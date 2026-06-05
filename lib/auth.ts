@@ -24,28 +24,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
-          select: { id: true, role: true, campusId: true },
+          select: { id: true, role: true, campusId: true, departmentId: true },
         })
-        // Bootstrap: promote to SUPERADMIN only if no other SUPERADMIN exists yet.
-        // This handles first-time setup without overriding a deliberate demotion.
+        // Bootstrap: promote to SUPER_ADMIN only if no other SUPER_ADMIN exists yet.
         if (
           process.env.ADMIN_BOOTSTRAP_EMAIL &&
           user.email === process.env.ADMIN_BOOTSTRAP_EMAIL &&
-          dbUser?.role !== Role.SUPERADMIN
+          dbUser?.role !== Role.SUPER_ADMIN
         ) {
-          const otherSuperadmin = await db.user.findFirst({
-            where: { role: Role.SUPERADMIN, id: { not: user.id! } },
+          const otherSuperAdmin = await db.user.findFirst({
+            where: { role: Role.SUPER_ADMIN, id: { not: user.id! } },
             select: { id: true },
           })
-          if (!otherSuperadmin) {
-            await db.user.update({ where: { id: user.id }, data: { role: Role.SUPERADMIN } })
-            if (dbUser) dbUser.role = Role.SUPERADMIN
+          if (!otherSuperAdmin) {
+            await db.user.update({ where: { id: user.id }, data: { role: Role.SUPER_ADMIN } })
+            if (dbUser) dbUser.role = Role.SUPER_ADMIN
           }
         }
         if (dbUser) {
           token.id = dbUser.id
           token.role = dbUser.role
           token.campusId = dbUser.campusId
+          token.departmentId = dbUser.departmentId
           token.lastRefreshed = Date.now()
         }
       }
@@ -58,11 +58,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (shouldRefresh && token.id) {
         const dbUser = await db.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, campusId: true },
+          select: { role: true, campusId: true, departmentId: true },
         })
         if (dbUser) {
           token.role = dbUser.role
           token.campusId = dbUser.campusId
+          token.departmentId = dbUser.departmentId
           token.lastRefreshed = Date.now()
         }
       }
@@ -74,6 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.id as string
       session.user.role = token.role as Role
       session.user.campusId = (token.campusId as string | null) ?? null
+      session.user.departmentId = (token.departmentId as string | null) ?? null
       return session
     },
   },

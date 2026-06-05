@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { isAdmin } from "@/types/enums"
+import { canAccessAdmin, canApproveStep1, canApproveStep2, canBypassApproval, LeaveStatus } from "@/types/enums"
 import { getCurrentAcademicYear } from "@/lib/academic-year"
 import { format, startOfWeek, endOfWeek, isWithinInterval } from "date-fns"
 import Link from "next/link"
@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { StatusBadge } from "@/components/status-badge"
 import {
   Clock,
   CheckCircle2,
@@ -30,18 +31,41 @@ import { QuickApproveButton } from "@/components/quick-approve-button"
 
 export default async function AdminPage() {
   const session = await auth()
-  if (!session || !isAdmin(session.user.role)) redirect("/dashboard")
+  if (!session || !canAccessAdmin(session.user.role)) redirect("/dashboard")
 
+  const role = session.user.role
   const { start, end, label } = getCurrentAcademicYear()
+
+  // Determine which status this role can act on (for "actionable" count)
+  let actionableStatus: string = LeaveStatus.PENDING
+  let actionableLabel = "Pending"
+  if (canApproveStep1(role)) {
+    actionableStatus = LeaveStatus.PENDING
+    actionableLabel = "Pending"
+  } else if (canApproveStep2(role)) {
+    actionableStatus = LeaveStatus.STEP1_APPROVED
+    actionableLabel = "Awaiting Chairman"
+  } else if (canBypassApproval(role)) {
+    actionableStatus = LeaveStatus.STEP2_APPROVED
+    actionableLabel = "Awaiting Dean"
+  }
+
+  // Scope filter for the query
+  const scopeFilter: Record<string, unknown> = {}
+  if (canApproveStep1(role) && session.user.campusId) {
+    scopeFilter.professor = { campusId: session.user.campusId }
+  } else if (canApproveStep2(role) && session.user.departmentId) {
+    scopeFilter.professor = { departmentId: session.user.departmentId }
+  }
 
   const [allRequests, approvedRequests, appSettings] = await Promise.all([
     db.leaveRequest.findMany({
-      where: { submittedAt: { gte: start, lte: end } },
+      where: { submittedAt: { gte: start, lte: end }, ...scopeFilter },
       include: { professor: { include: { campus: true, department: true } } },
       orderBy: { submittedAt: "desc" },
     }),
     db.leaveRequest.findMany({
-      where: { status: "APPROVED" },
+      where: { status: LeaveStatus.APPROVED, ...scopeFilter },
       include: { professor: { include: { campus: true } } },
     }),
     db.appSettings.findUnique({ where: { id: "global" } }),
@@ -51,12 +75,14 @@ export default async function AdminPage() {
 
   const counts = {
     total: allRequests.length,
-    pending: allRequests.filter((r) => r.status === "PENDING").length,
-    approved: allRequests.filter((r) => r.status === "APPROVED").length,
-    rejected: allRequests.filter((r) => r.status === "REJECTED").length,
+    actionable: allRequests.filter((r) => r.status === actionableStatus).length,
+    approved: allRequests.filter((r) => r.status === LeaveStatus.APPROVED).length,
+    rejected: allRequests.filter((r) =>
+      [LeaveStatus.REJECTED, LeaveStatus.STEP1_REJECTED, LeaveStatus.STEP2_REJECTED].includes(r.status as never)
+    ).length,
   }
 
-  const pendingRequests = allRequests.filter((r) => r.status === "PENDING")
+  const actionableRequests = allRequests.filter((r) => r.status === actionableStatus)
 
   const now = new Date()
   const weekStart = startOfWeek(now, { weekStartsOn: 1 })
@@ -100,14 +126,14 @@ export default async function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">Academic year {label} overview</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Total", value: counts.total, color: "text-foreground", iconBg: "bg-muted", icon: ClipboardList, iconColor: "text-muted-foreground" },
-          { label: "Pending", value: counts.pending, color: "text-amber-600", iconBg: "bg-amber-100", icon: Clock, iconColor: "text-amber-600" },
+          { label: actionableLabel, value: counts.actionable, color: "text-amber-600", iconBg: "bg-amber-100", icon: Clock, iconColor: "text-amber-600" },
           { label: "Approved", value: counts.approved, color: "text-green-600", iconBg: "bg-green-100", icon: CheckCircle2, iconColor: "text-green-600" },
           { label: "Rejected", value: counts.rejected, color: "text-red-600", iconBg: "bg-red-100", icon: XCircle, iconColor: "text-red-600" },
         ].map(({ label: lbl, value, color, iconBg, icon: Icon, iconColor }) => (
@@ -130,22 +156,24 @@ export default async function AdminPage() {
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-500" />
-                  Pending Reviews
+                  {actionableLabel} Reviews
                 </CardTitle>
                 <CardDescription>
-                  {counts.pending === 0 ? "All caught up." : `${counts.pending} request${counts.pending !== 1 ? "s" : ""} waiting`}
+                  {counts.actionable === 0
+                    ? "All caught up."
+                    : `${counts.actionable} request${counts.actionable !== 1 ? "s" : ""} waiting`}
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin/submissions?status=PENDING">View all</Link>
+                <Link href={`/admin/submissions?status=${actionableStatus}`}>View all</Link>
               </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {pendingRequests.length === 0 ? (
+            {actionableRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                 <CheckCircle2 className="w-8 h-8 mb-2 opacity-40" />
-                <p className="text-sm">No pending requests</p>
+                <p className="text-sm">No actionable requests</p>
               </div>
             ) : (
               <Table>
@@ -153,11 +181,12 @@ export default async function AdminPage() {
                   <TableRow>
                     <TableHead>Professor</TableHead>
                     <TableHead>Days</TableHead>
-                    <TableHead className="w-28" />
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendingRequests.slice(0, 8).map((req) => (
+                  {actionableRequests.slice(0, 8).map((req) => (
                     <TableRow key={req.id}>
                       <TableCell>
                         <p className="font-medium text-sm leading-none">
@@ -168,6 +197,9 @@ export default async function AdminPage() {
                         </p>
                       </TableCell>
                       <TableCell className="text-sm">{req.dates.length}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={req.status} />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <QuickApproveButton requestId={req.id} />
