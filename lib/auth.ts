@@ -72,13 +72,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { id: token.id as string },
           select: { role: true, campusId: true, departmentId: true, blocked: true },
         })
-        if (dbUser) {
-          token.role = dbUser.role
-          token.campusId = dbUser.campusId
-          token.departmentId = dbUser.departmentId
-          token.blocked = dbUser.blocked
-          token.lastRefreshed = Date.now()
-        }
+        if (!dbUser) return null  // account deleted — invalidate session immediately
+        token.role = dbUser.role
+        token.campusId = dbUser.campusId
+        token.departmentId = dbUser.departmentId
+        token.blocked = dbUser.blocked
+        token.lastRefreshed = Date.now()
       }
 
       return token
