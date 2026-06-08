@@ -81,6 +81,34 @@ export default async function DashboardPage({ searchParams }: Props) {
   const pendingDateISOs = leaveRequests
     .filter((r) => ["PENDING", "STEP1_APPROVED", "STEP2_APPROVED"].includes(r.status))
     .flatMap((r) => r.dates.map((d) => d.toISOString()))
+  // Parse which dates the admin flagged in the rejection comment.
+  // Comment format: "Cannot approve the following dates: Mon, Jun 23, Tue, Jun 24."
+  // We check each request date against the flagged text using the same format string.
+  function parseFlaggedDateKeys(comment: string | null, dates: Date[]): Set<string> {
+    if (!comment) return new Set()
+    const match = comment.match(/Cannot approve the following dates: (.+?)\./)
+    if (!match) return new Set()
+    const flaggedText = match[1]
+    const keys = new Set<string>()
+    for (const date of dates) {
+      if (flaggedText.includes(format(date, "EEE, MMM d"))) {
+        keys.add(format(date, "yyyy-MM-dd"))
+      }
+    }
+    return keys
+  }
+
+  // Only include dates from rejected requests that the admin did NOT flag as conflicting.
+  // Flagged dates are the ones the admin explicitly blocked — the professor cannot restore those.
+  // Unflagged dates in a rejected request are the ones the professor should re-submit.
+  const rejectedDateISOs = leaveRequests
+    .filter((r) => rejectedStatuses.includes(r.status))
+    .flatMap((r) => {
+      const flagged = parseFlaggedDateKeys(r.adminComment, r.dates)
+      return r.dates
+        .filter((d) => !flagged.has(format(d, "yyyy-MM-dd")))
+        .map((d) => d.toISOString())
+    })
 
   const canSubmitMore = submissionsOpen && remainingDays > 0
 
@@ -225,6 +253,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                 maxDays={remainingDays}
                 approvedDateISOs={approvedDateISOs}
                 pendingDateISOs={pendingDateISOs}
+                rejectedDateISOs={rejectedDateISOs}
               />
             </>
           )}

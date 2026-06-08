@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { getCurrentAcademicYear, isBlockedDate } from "@/lib/academic-year"
+import { notifyNewSubmission } from "@/lib/email"
 
 export async function submitLeaveRequest(dates: string[]) {
   const session = await auth()
@@ -62,9 +63,33 @@ export async function submitLeaveRequest(dates: string[]) {
       }
     }
 
-    await db.leaveRequest.create({
-      data: { professorId: session.user.id, dates: parsedDates },
-    })
+    const [newRequest, professor] = await Promise.all([
+      db.leaveRequest.create({
+        data: { professorId: session.user.id, dates: parsedDates },
+      }),
+      db.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          name: true,
+          email: true,
+          campusId: true,
+          campus: { select: { name: true } },
+          department: { select: { name: true } },
+        },
+      }),
+    ])
+
+    if (professor) {
+      await notifyNewSubmission({
+        requestId: newRequest.id,
+        professorName: professor.name,
+        professorEmail: professor.email,
+        campusId: professor.campusId,
+        campusName: professor.campus?.name ?? null,
+        departmentName: professor.department?.name ?? null,
+        dates: parsedDates,
+      })
+    }
 
     return { success: true }
   } catch {

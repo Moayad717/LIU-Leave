@@ -198,7 +198,7 @@ export default async function StatsPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold tracking-tight">Statistics</h1>
           <p className="text-muted-foreground">Academic year {label}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" asChild>
             <a href="/api/admin/export-by-day" download>
               <Download className="w-4 h-4" />

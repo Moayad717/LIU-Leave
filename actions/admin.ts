@@ -7,10 +7,17 @@ import {
   canManageUsers,
   canAssignRole,
   canBypassApproval,
+  getRoleLabel,
   Role,
   LeaveStatus,
 } from "@/types/enums"
 import { revalidatePath } from "next/cache"
+import {
+  notifyChairmen,
+  notifyDeans,
+  notifyProfessorApproved,
+  notifyProfessorRejected,
+} from "@/lib/email"
 
 // Auth guard for any admin-capable role (ASSISTANT_DEAN, CHAIRMAN, DEAN, COORDINATOR, SUPER_ADMIN)
 async function requireApprover() {
@@ -51,7 +58,18 @@ export async function reviewLeaveRequest(
   try {
     const request = await db.leaveRequest.findUnique({
       where: { id: requestId },
-      include: { professor: { select: { campusId: true, departmentId: true } } },
+      include: {
+        professor: {
+          select: {
+            name: true,
+            email: true,
+            campusId: true,
+            departmentId: true,
+            campus: { select: { name: true } },
+            department: { select: { name: true } },
+          },
+        },
+      },
     })
     if (!request) return { error: "Leave request not found." }
 
@@ -99,6 +117,35 @@ export async function reviewLeaveRequest(
         reviewedById: session!.user.id,
       },
     })
+
+    // Send email notifications — non-blocking: sendSafely catches all errors
+    const prof = request.professor
+    const emailBase = {
+      requestId,
+      professorName: prof.name,
+      professorEmail: prof.email,
+      campusName: prof.campus?.name ?? null,
+      departmentName: prof.department?.name ?? null,
+      dates: request.dates,
+    }
+    if (newStatus === LeaveStatus.STEP1_APPROVED) {
+      await notifyChairmen({ ...emailBase, departmentId: prof.departmentId })
+    } else if (newStatus === LeaveStatus.STEP2_APPROVED) {
+      await notifyDeans(emailBase)
+    } else if (newStatus === LeaveStatus.APPROVED) {
+      await notifyProfessorApproved({ professorEmail: prof.email, dates: request.dates })
+    } else if (
+      newStatus === LeaveStatus.STEP1_REJECTED ||
+      newStatus === LeaveStatus.STEP2_REJECTED ||
+      newStatus === LeaveStatus.REJECTED
+    ) {
+      await notifyProfessorRejected({
+        professorEmail: prof.email,
+        rejectedBy: getRoleLabel(role),
+        comment: comment.trim() || null,
+        dates: request.dates,
+      })
+    }
 
     revalidatePath("/admin")
     revalidatePath("/admin/submissions")

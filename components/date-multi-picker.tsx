@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react"
 import { DayPicker } from "react-day-picker"
 import { format, isSameDay } from "date-fns"
-import { ChevronLeft, ChevronRight, X, CalendarCheck, Save, Check } from "lucide-react"
+import { ChevronLeft, ChevronRight, X, CalendarCheck, Save, Check, CalendarPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,7 @@ interface Props {
   blockedDates?: Date[]
   approvedDates?: Date[]
   pendingDates?: Date[]
+  rejectedDates?: Date[]
   onSuccess: () => void
   maxDays?: number
 }
@@ -37,6 +38,7 @@ export function DateMultiPicker({
   blockedDates = [],
   approvedDates = [],
   pendingDates = [],
+  rejectedDates = [],
   onSuccess,
   maxDays = 22,
 }: Props) {
@@ -94,6 +96,65 @@ export function DateMultiPicker({
     setSelected((prev) => prev.filter((d) => !isSameDay(d, date)))
   }
 
+  const handleReuseRejected = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Dates that are no longer free (active requests, current selection, holidays, blocked)
+    const taken = new Set([
+      ...approvedDates.map((d) => format(d, "yyyy-MM-dd")),
+      ...pendingDates.map((d) => format(d, "yyyy-MM-dd")),
+      ...selected.map((d) => format(d, "yyyy-MM-dd")),
+      ...holidayDates.map((d) => format(d, "yyyy-MM-dd")),
+      ...blockedDates.map((d) => format(d, "yyyy-MM-dd")),
+    ])
+
+    // From the rejected request(s), keep only dates that are still free
+    const available = rejectedDates.filter((d) => {
+      const nd = new Date(d)
+      nd.setHours(0, 0, 0, 0)
+      return (
+        nd >= today &&
+        nd >= academicYearStart &&
+        nd <= academicYearEnd &&
+        nd.getDay() !== 0 &&
+        nd.getDay() !== 6 &&
+        !taken.has(format(nd, "yyyy-MM-dd"))
+      )
+    })
+    // Deduplicate (same date may appear in multiple rejected requests)
+    const seen = new Set<string>()
+    const unique = available.filter((d) => {
+      const key = format(d, "yyyy-MM-dd")
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    if (unique.length === 0) {
+      toast.info("No days from your rejected request(s) are available to restore.")
+      return
+    }
+
+    const slotsLeft = MAX_DAYS - selected.length
+    const toAdd = unique.slice(0, slotsLeft)
+
+    setSelected((prev) => {
+      const combined = [...prev, ...toAdd]
+      return combined.filter((d, i) => combined.findIndex((x) => isSameDay(x, d)) === i)
+    })
+
+    if (toAdd.length < unique.length) {
+      const skipped = unique.length - toAdd.length
+      toast.warning(
+        `Restored ${toAdd.length} day${toAdd.length !== 1 ? "s" : ""}. ` +
+          `${skipped} skipped — only ${slotsLeft} slot${slotsLeft !== 1 ? "s" : ""} remaining.`,
+      )
+    } else {
+      toast.success(`Restored ${toAdd.length} day${toAdd.length !== 1 ? "s" : ""} from rejected request${rejectedDates.length > toAdd.length ? "s" : ""}.`)
+    }
+  }
+
   const handleSubmit = () => {
     if (selected.length === 0) {
       toast.error("Please select at least one date.")
@@ -131,28 +192,42 @@ export function DateMultiPicker({
             <span className="text-sm text-amber-600 font-medium">Maximum reached</span>
           )}
         </div>
-        {selected.length > 0 && (
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
+          {rejectedDates.length > 0 && selected.length < MAX_DAYS && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={saveDraft}
+              onClick={handleReuseRejected}
               disabled={isPending}
-              className={`text-xs gap-1 ${justSaved ? "text-green-600" : "text-muted-foreground"}`}
+              className="text-xs gap-1.5"
             >
-              {justSaved ? <Check className="w-3 h-3" /> : <Save className="w-3 h-3" />}
-              {justSaved ? "Saved" : "Save draft"}
+              <CalendarPlus className="w-3 h-3" />
+              Restore rejected days
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelected([])}
-              className="text-muted-foreground text-xs"
-            >
-              Clear all
-            </Button>
-          </div>
-        )}
+          )}
+          {selected.length > 0 && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={saveDraft}
+                disabled={isPending}
+                className={`text-xs gap-1 ${justSaved ? "text-green-600" : "text-muted-foreground"}`}
+              >
+                {justSaved ? <Check className="w-3 h-3" /> : <Save className="w-3 h-3" />}
+                {justSaved ? "Saved" : "Save draft"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelected([])}
+                className="text-muted-foreground text-xs"
+              >
+                Clear all
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-center overflow-x-auto">

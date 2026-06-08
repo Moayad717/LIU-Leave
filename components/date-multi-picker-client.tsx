@@ -16,6 +16,7 @@ export function DateMultiPickerClient({
   maxDays,
   approvedDateISOs = [],
   pendingDateISOs = [],
+  rejectedDateISOs = [],
 }: {
   startISO: string
   endISO: string
@@ -23,6 +24,7 @@ export function DateMultiPickerClient({
   maxDays?: number
   approvedDateISOs?: string[]
   pendingDateISOs?: string[]
+  rejectedDateISOs?: string[]
 }) {
   const router = useRouter()
 
@@ -45,6 +47,7 @@ export function DateMultiPickerClient({
       blockedDates={blocked}
       approvedDates={approvedDateISOs.map((iso) => new Date(iso))}
       pendingDates={pendingDateISOs.map((iso) => new Date(iso))}
+      rejectedDates={rejectedDateISOs.map((iso) => new Date(iso))}
       onSuccess={() => router.refresh()}
       maxDays={maxDays}
     />
