@@ -13,6 +13,7 @@ export const authConfig = {
       session.user.role = token.role as Role
       session.user.campusId = (token.campusId as string | null) ?? null
       session.user.departmentId = (token.departmentId as string | null) ?? null
+      session.user.blocked = (token.blocked as boolean | undefined) ?? false
       return session
     },
   },

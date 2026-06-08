@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DayPicker } from "react-day-picker"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn, parseDate } from "@/lib/utils"
@@ -14,9 +14,19 @@ export function SubmittedCalendar({ dates }: Props) {
   const parsed = dates.map((d) => parseDate(d))
   const defaultMonth = parsed.length > 0
     ? new Date(parsed[0].getFullYear(), parsed[0].getMonth(), 1)
-    : new Date()
+    : null
 
-  const [month, setMonth] = useState(defaultMonth)
+  const [month, setMonth] = useState<Date | undefined>(undefined)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMonth(defaultMonth ?? new Date())
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return <div className="h-48 rounded-lg bg-muted/30 animate-pulse" />
+  }
 
   return (
     <div className="flex justify-center overflow-x-auto">

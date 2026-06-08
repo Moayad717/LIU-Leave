@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { GraduationCap, ShieldX, AlertTriangle } from "lucide-react"
+import { signOut } from "@/lib/auth"
 
 const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
   DomainRestricted: {
@@ -13,6 +14,11 @@ const ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
   AccessDenied: {
     title: "Access Denied",
     description: "You do not have permission to access this application.",
+  },
+  AccountBlocked: {
+    title: "Account Blocked",
+    description:
+      "Your account has been suspended. Please contact an administrator for assistance.",
   },
   OAuthSignin: {
     title: "Sign-in Error",
@@ -60,9 +66,22 @@ export default function AuthErrorPage({ searchParams }: Props) {
             <AlertDescription>{error.description}</AlertDescription>
           </Alert>
 
-          <Button asChild className="w-full" variant="outline">
-            <Link href="/auth/signin">Back to Sign In</Link>
-          </Button>
+          {errorKey === "AccountBlocked" ? (
+            <form
+              action={async () => {
+                "use server"
+                await signOut({ redirectTo: "/auth/signin" })
+              }}
+            >
+              <Button type="submit" className="w-full" variant="outline">
+                Sign out and try again
+              </Button>
+            </form>
+          ) : (
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/auth/signin">Back to Sign In</Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

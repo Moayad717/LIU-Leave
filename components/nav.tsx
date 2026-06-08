@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { GraduationCap, LayoutDashboard, ClipboardList, BarChart3, Users, Settings, LogOut, ChevronDown, UserCircle } from "lucide-react"
+import { GraduationCap, LayoutDashboard, ClipboardList, BarChart3, Users, Settings, LogOut, ChevronDown, UserCircle, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -27,6 +27,7 @@ interface NavUser {
 
 const professorLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/tutorial", label: "Guide", icon: BookOpen },
 ]
 
 const limitedAdminLinks = [
@@ -34,6 +35,7 @@ const limitedAdminLinks = [
   { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
   { href: "/admin/stats", label: "Statistics", icon: BarChart3 },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/tutorial", label: "Guide", icon: BookOpen },
 ]
 
 const fullAdminLinks = [
@@ -42,6 +44,7 @@ const fullAdminLinks = [
   { href: "/admin/stats", label: "Statistics", icon: BarChart3 },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/tutorial", label: "Guide", icon: BookOpen },
 ]
 
 function getLinks(role: Role) {

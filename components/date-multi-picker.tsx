@@ -46,8 +46,13 @@ export function DateMultiPicker({
   const [selected, setSelected] = useState<Date[]>([])
   const [isPending, startTransition] = useTransition()
   const [justSaved, setJustSaved] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   const holidayDates = holidays.map((h) => parseDate(h.iso))
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     try {
@@ -230,6 +235,9 @@ export function DateMultiPicker({
         </div>
       </div>
 
+      {!mounted ? (
+        <div className="h-64 rounded-lg bg-muted/30 animate-pulse" />
+      ) : (
       <div className="flex justify-center overflow-x-auto">
         <DayPicker
           mode="multiple"
@@ -299,6 +307,7 @@ export function DateMultiPicker({
           }}
         />
       </div>
+      )}
 
       {sortedSelected.length > 0 && (
         <Card className="bg-muted/30">

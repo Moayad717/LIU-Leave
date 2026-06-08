@@ -214,6 +214,44 @@ export async function updateUserRole(
   }
 }
 
+export async function blockUser(targetUserId: string, block: boolean) {
+  const session = await requireApprover()
+  if (targetUserId === session!.user.id) {
+    return { error: "You cannot block yourself." }
+  }
+  try {
+    const target = await db.user.findUnique({ where: { id: targetUserId } })
+    if (!target) return { error: "User not found." }
+    if (!canAssignRole(session!.user.role, target.role)) {
+      return { error: "You do not have permission to block this user." }
+    }
+    await db.user.update({ where: { id: targetUserId }, data: { blocked: block } })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
+export async function deleteUser(targetUserId: string) {
+  const session = await requireApprover()
+  if (targetUserId === session!.user.id) {
+    return { error: "You cannot delete yourself." }
+  }
+  try {
+    const target = await db.user.findUnique({ where: { id: targetUserId } })
+    if (!target) return { error: "User not found." }
+    if (!canAssignRole(session!.user.role, target.role)) {
+      return { error: "You do not have permission to delete this user." }
+    }
+    await db.user.delete({ where: { id: targetUserId } })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
 export async function transferSuperadmin(targetUserId: string) {
   const session = await requireApprover()
 

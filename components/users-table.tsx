@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { format } from "date-fns"
-import { Search } from "lucide-react"
+import { Search, ShieldOff, Shield, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Table,
@@ -14,8 +15,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { RoleToggle } from "@/components/role-toggle"
-import { getRoleLabel, type Role } from "@/types/enums"
+import { getRoleLabel, canAssignRole, type Role } from "@/types/enums"
+import { blockUser, deleteUser } from "@/actions/admin"
+import { toast } from "sonner"
 
 interface Campus { id: string; name: string }
 interface Department { id: string; name: string }
@@ -26,6 +37,7 @@ interface UserRow {
   email: string | null
   image: string | null
   role: Role
+  blocked: boolean
   createdAt: Date
   campus: { name: string } | null
   department: { name: string } | null
@@ -58,6 +70,8 @@ function RoleBadge({ role }: { role: Role }) {
 
 export function UsersTable({ users, currentUserId, currentUserRole, campuses, departments }: Props) {
   const [search, setSearch] = useState("")
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const filtered = search.trim()
     ? users.filter((u) => {
@@ -71,6 +85,25 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
         )
       })
     : users
+
+  function handleBlock(user: UserRow) {
+    startTransition(async () => {
+      const res = await blockUser(user.id, !user.blocked)
+      if (res?.error) toast.error(res.error)
+      else toast.success(user.blocked ? `${user.name ?? "User"} unblocked.` : `${user.name ?? "User"} blocked.`)
+    })
+  }
+
+  function handleDelete() {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    setDeleteTarget(null)
+    startTransition(async () => {
+      const res = await deleteUser(target.id)
+      if (res?.error) toast.error(res.error)
+      else toast.success(`${target.name ?? "User"} has been deleted.`)
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -106,9 +139,10 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
                 ? user.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
                 : user.email?.[0].toUpperCase() ?? "U"
               const isSelf = user.id === currentUserId
+              const canManage = !isSelf && canAssignRole(currentUserRole, user.role)
 
               return (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className={user.blocked ? "opacity-60" : undefined}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
@@ -116,10 +150,13 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
                         <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium leading-tight">
+                        <p className="text-sm font-medium leading-tight flex items-center gap-1.5">
                           {user.name ?? "—"}
                           {isSelf && (
-                            <span className="ml-1.5 text-xs text-muted-foreground">(you)</span>
+                            <span className="text-xs text-muted-foreground">(you)</span>
+                          )}
+                          {user.blocked && (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Blocked</Badge>
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -135,15 +172,41 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
                     {format(user.createdAt, "MMM d, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
-                    <RoleToggle
-                      userId={user.id}
-                      userName={user.name ?? user.email ?? "User"}
-                      currentRole={user.role}
-                      isSelf={isSelf}
-                      callerRole={currentUserRole}
-                      campuses={campuses}
-                      departments={departments}
-                    />
+                    <div className="flex items-center justify-end gap-1">
+                      <RoleToggle
+                        userId={user.id}
+                        userName={user.name ?? user.email ?? "User"}
+                        currentRole={user.role}
+                        isSelf={isSelf}
+                        callerRole={currentUserRole}
+                        campuses={campuses}
+                        departments={departments}
+                      />
+                      {canManage && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${user.blocked ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"}`}
+                            onClick={() => handleBlock(user)}
+                            disabled={isPending}
+                            title={user.blocked ? "Unblock user" : "Block user"}
+                          >
+                            {user.blocked ? <Shield className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setDeleteTarget(user)}
+                            disabled={isPending}
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               )
@@ -151,6 +214,25 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
           </TableBody>
         </Table>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              This will permanently delete <strong>{deleteTarget?.name ?? deleteTarget?.email ?? "this user"}</strong> and all their leave requests. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+              {isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

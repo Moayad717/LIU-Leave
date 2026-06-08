@@ -8,6 +8,7 @@ declare module "next-auth" {
       role: Role
       campusId: string | null
       departmentId: string | null
+      blocked: boolean
     } & DefaultSession["user"]
   }
 
@@ -25,5 +26,6 @@ declare module "next-auth/jwt" {
     campusId?: string | null
     departmentId?: string | null
     lastRefreshed?: number
+    blocked?: boolean
   }
 }

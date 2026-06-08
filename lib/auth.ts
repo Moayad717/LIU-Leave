@@ -20,11 +20,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      if (!user?.id) return false
+      if (!user.email?.endsWith("@liu.edu.lb")) return "/auth/error?error=DomainRestricted"
+      const dbUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: { blocked: true },
+      })
+      if (dbUser?.blocked) return "/auth/error?error=AccountBlocked"
+      return true
+    },
+
     async jwt({ token, user, trigger }) {
       if (user) {
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
-          select: { id: true, role: true, campusId: true, departmentId: true },
+          select: { id: true, role: true, campusId: true, departmentId: true, blocked: true },
         })
         // Bootstrap: promote to SUPER_ADMIN only if no other SUPER_ADMIN exists yet.
         if (
@@ -46,6 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = dbUser.role
           token.campusId = dbUser.campusId
           token.departmentId = dbUser.departmentId
+          token.blocked = dbUser.blocked
           token.lastRefreshed = Date.now()
         }
       }
@@ -58,12 +70,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (shouldRefresh && token.id) {
         const dbUser = await db.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, campusId: true, departmentId: true },
+          select: { role: true, campusId: true, departmentId: true, blocked: true },
         })
         if (dbUser) {
           token.role = dbUser.role
           token.campusId = dbUser.campusId
           token.departmentId = dbUser.departmentId
+          token.blocked = dbUser.blocked
           token.lastRefreshed = Date.now()
         }
       }
@@ -76,6 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role as Role
       session.user.campusId = (token.campusId as string | null) ?? null
       session.user.departmentId = (token.departmentId as string | null) ?? null
+      session.user.blocked = (token.blocked as boolean | undefined) ?? false
       return session
     },
   },

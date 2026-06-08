@@ -15,8 +15,14 @@ export default auth((req) => {
 
   if (isApiAuth) return NextResponse.next()
 
+  // Redirect blocked users everywhere except the error page (avoid redirect loop)
+  if (isLoggedIn && session!.user.blocked && !nextUrl.pathname.startsWith("/auth/error")) {
+    return NextResponse.redirect(new URL("/auth/error?error=AccountBlocked", nextUrl))
+  }
+
   if (isAuthPage) {
-    if (isLoggedIn) return NextResponse.redirect(new URL("/dashboard", nextUrl))
+    // Blocked users must stay on the error page so they can sign out and re-authenticate
+    if (isLoggedIn && !session!.user.blocked) return NextResponse.redirect(new URL("/dashboard", nextUrl))
     return NextResponse.next()
   }
 
