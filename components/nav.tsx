@@ -62,7 +62,7 @@ export function Nav({ user }: { user: NavUser }) {
     : user.email?.[0].toUpperCase() ?? "U"
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75 shadow-sm">
+    <header className="sticky top-0 z-50 w-full border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75 shadow-sm print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-bold text-primary group">
