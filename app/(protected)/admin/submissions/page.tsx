@@ -6,25 +6,16 @@ import {
   canApproveStep1,
   canApproveStep2,
   canBypassApproval,
+  canBulkApprove,
   LeaveStatus,
 } from "@/types/enums"
-import Link from "next/link"
-import { format } from "date-fns"
 import { Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { StatusBadge } from "@/components/status-badge"
 import { SubmissionsFilter } from "@/components/submissions-filter"
-import { ChevronRight, ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
+import { BulkSubmissionsTable } from "@/components/bulk-submissions-table"
+import { ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 
 interface Props {
@@ -151,51 +142,10 @@ export default async function SubmissionsPage({ searchParams }: Props) {
           <CardDescription>{requests.length} results</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          {requests.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <ClipboardList className="w-10 h-10 mb-3 opacity-40" />
-              <p>No requests found.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Professor</TableHead>
-                  <TableHead>Campus</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Days</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-20" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.map((req) => (
-                  <TableRow key={req.id}>
-                    <TableCell className="font-medium">
-                      {req.professor.name ?? req.professor.email}
-                    </TableCell>
-                    <TableCell>{req.professor.campus?.name ?? "—"}</TableCell>
-                    <TableCell>{req.professor.department?.name ?? "—"}</TableCell>
-                    <TableCell>{req.dates.length}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {format(req.submittedAt, "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={req.status} />
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/admin/submissions/${req.id}`}>
-                          <ChevronRight className="w-4 h-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <BulkSubmissionsTable
+            requests={requests}
+            canBulkApprove={canBulkApprove(role)}
+          />
         </CardContent>
       </Card>
     </div>

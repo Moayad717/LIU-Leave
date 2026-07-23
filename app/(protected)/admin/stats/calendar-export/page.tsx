@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { canAccessAdmin } from "@/types/enums"
+import { canAccessAdmin, canApproveStep1, canApproveStep2 } from "@/types/enums"
 import { getAcademicYearFromStartYear, getCurrentAcademicYear, isBlockedDate } from "@/lib/academic-year"
 import { format, getDaysInMonth, getDay, addMonths } from "date-fns"
 import { PrintButton } from "./print-button"
@@ -50,10 +50,19 @@ export default async function CalendarExportPage({ searchParams }: Props) {
     : currentYear.start.getFullYear()
   const { start, end, label } = getAcademicYearFromStartYear(selectedStartYear)
 
+  const role = session.user.role
+  const scopeFilter: Record<string, unknown> = {}
+  if (canApproveStep1(role) && session.user.campusId) {
+    scopeFilter.campusId = session.user.campusId
+  } else if (canApproveStep2(role) && session.user.departmentId) {
+    scopeFilter.departmentId = session.user.departmentId
+  }
+
   const requests = await db.leaveRequest.findMany({
     where: {
       status: "APPROVED",
       submittedAt: { gte: start, lte: end },
+      ...(Object.keys(scopeFilter).length > 0 ? { professor: scopeFilter } : {}),
     },
     select: {
       dates: true,
@@ -100,7 +109,13 @@ export default async function CalendarExportPage({ searchParams }: Props) {
       <div className="print:hidden flex items-center justify-between px-6 py-4 border-b mb-2 bg-white sticky top-0 z-10">
         <div>
           <h1 className="text-lg font-bold">Leave Calendar — {label}</h1>
-          <p className="text-xs text-gray-500">Approved leave · one month per page</p>
+          <p className="text-xs text-gray-500">
+            {canApproveStep1(role)
+              ? "Your campus · Approved leave · one month per page"
+              : canApproveStep2(role)
+              ? "Your department · Approved leave · one month per page"
+              : "Approved leave · one month per page"}
+          </p>
         </div>
         <PrintButton />
       </div>

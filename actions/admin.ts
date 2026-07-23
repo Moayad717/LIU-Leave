@@ -7,6 +7,8 @@ import {
   canManageUsers,
   canAssignRole,
   canBypassApproval,
+  canBulkApprove,
+  isRejected,
   getRoleLabel,
   Role,
   LeaveStatus,
@@ -74,7 +76,7 @@ export async function reviewLeaveRequest(
     if (!request) return { error: "Leave request not found." }
 
     // Terminal states cannot be re-reviewed by anyone
-    if (request.status === LeaveStatus.APPROVED || request.status === LeaveStatus.REJECTED) {
+    if (request.status === LeaveStatus.APPROVED || isRejected(request.status)) {
       return { error: "This request has already been finalised and cannot be changed." }
     }
 
@@ -246,6 +248,40 @@ export async function deleteUser(targetUserId: string) {
     }
     await db.user.delete({ where: { id: targetUserId } })
     revalidatePath("/admin/users")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
+export async function bulkApproveRequests(ids: string[]) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Not authenticated.")
+  if (!canBulkApprove(session.user.role)) throw new Error("Insufficient permissions.")
+  if (!ids.length) return { success: true }
+
+  try {
+    await db.leaveRequest.updateMany({
+      where: {
+        id: { in: ids },
+        status: {
+          notIn: [
+            LeaveStatus.APPROVED,
+            LeaveStatus.REJECTED,
+            LeaveStatus.STEP1_REJECTED,
+            LeaveStatus.STEP2_REJECTED,
+          ] as never[],
+        },
+      },
+      data: {
+        status: LeaveStatus.APPROVED,
+        reviewedAt: new Date(),
+        reviewedById: session.user.id,
+      },
+    })
+    revalidatePath("/admin")
+    revalidatePath("/admin/submissions")
+    revalidatePath("/admin/stats")
     return { success: true }
   } catch {
     return { error: "Something went wrong. Please try again." }

@@ -52,6 +52,11 @@ export function canBypassApproval(role: string) {
   return role === Role.DEAN || role === Role.COORDINATOR || role === Role.SUPER_ADMIN
 }
 
+// Bulk approve on submissions page — DEAN and SUPER_ADMIN only (not COORDINATOR)
+export function canBulkApprove(role: string) {
+  return role === Role.DEAN || role === Role.SUPER_ADMIN
+}
+
 // Users page + Settings page — only higher authority roles
 export function canManageUsers(role: string) {
   return role === Role.DEAN || role === Role.COORDINATOR || role === Role.SUPER_ADMIN

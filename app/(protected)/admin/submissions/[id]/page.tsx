@@ -7,6 +7,7 @@ import {
   canApproveStep2,
   canBypassApproval,
   canManageUsers,
+  isRejected,
   LeaveStatus,
   type Role,
 } from "@/types/enums"
@@ -115,7 +116,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
   const sortedDates = [...req.dates].sort((a, b) => a.getTime() - b.getTime())
 
   // Terminal states are locked — no further review regardless of role
-  const isTerminal = req.status === LeaveStatus.APPROVED || req.status === LeaveStatus.REJECTED
+  const isTerminal = req.status === LeaveStatus.APPROVED || isRejected(req.status)
 
   // Determine if the current user can review this request
   const canReview =
