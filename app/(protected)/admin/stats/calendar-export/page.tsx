@@ -127,13 +127,13 @@ export default async function CalendarExportPage({ searchParams }: Props) {
               {monthLabel}
             </h2>
 
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 border-l border-t border-gray-300 text-xs">
+            {/* Calendar grid — gap-px on gray bg renders as solid grid lines */}
+            <div className="grid grid-cols-7 gap-px bg-gray-300 border border-gray-300 text-xs">
               {/* Day-of-week header */}
               {DAY_HEADERS.map((d) => (
                 <div
                   key={d}
-                  className="border-r border-b border-gray-300 bg-gray-100 text-center font-semibold py-1 text-gray-600 text-[10px] uppercase tracking-wider"
+                  className="bg-gray-100 text-center font-semibold py-1 text-gray-600 text-[10px] uppercase tracking-wider"
                 >
                   {d}
                 </div>
@@ -145,7 +145,7 @@ export default async function CalendarExportPage({ searchParams }: Props) {
                   return (
                     <div
                       key={`filler-${i}`}
-                      className="border-r border-b border-gray-300 bg-gray-50 min-h-[72px]"
+                      className="bg-gray-50 min-h-[72px]"
                     />
                   )
                 }
@@ -161,7 +161,7 @@ export default async function CalendarExportPage({ searchParams }: Props) {
                 return (
                   <div
                     key={dateKey}
-                    className={`border-r border-b border-gray-300 min-h-[72px] p-1 ${muted ? "bg-gray-100" : "bg-white"}`}
+                    className={`min-h-[72px] p-1 ${muted ? "bg-gray-100" : "bg-white"}`}
                   >
                     <span className={`text-[10px] font-bold block mb-0.5 ${muted ? "text-gray-400" : "text-gray-700"}`}>
                       {day}
