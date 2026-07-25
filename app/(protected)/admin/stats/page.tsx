@@ -12,7 +12,7 @@ import { CampusBreakdown } from "@/components/campus-breakdown"
 import type { CampusEntry } from "@/components/campus-breakdown"
 import { ProfsTable } from "@/components/profs-table"
 import { YearFilter } from "@/components/year-filter"
-import { AlertTriangle, CalendarDays, Building, User, CheckCircle2, Download, CalendarRange } from "lucide-react"
+import { AlertTriangle, CalendarDays, Building, User, CheckCircle2, CalendarRange } from "lucide-react"
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -199,18 +199,6 @@ export default async function StatsPage({ searchParams }: Props) {
           <p className="text-muted-foreground">Academic year {label}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <a href="/api/admin/export-by-day" download>
-              <Download className="w-4 h-4" />
-              Export by Day
-            </a>
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <a href="/api/admin/export" download>
-              <Download className="w-4 h-4" />
-              Export by Professor
-            </a>
-          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" asChild>
             <a href={`/admin/stats/calendar-export?year=${selectedStartYear}`}>
               <CalendarRange className="w-4 h-4" />

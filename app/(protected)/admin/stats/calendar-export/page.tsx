@@ -1,13 +1,14 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { canAccessAdmin, canApproveStep1, canApproveStep2 } from "@/types/enums"
+import { canAccessAdmin, canApproveStep1, canApproveStep2, canBypassApproval } from "@/types/enums"
 import { getAcademicYearFromStartYear, getCurrentAcademicYear, isBlockedDate } from "@/lib/academic-year"
 import { format, getDaysInMonth, getDay, addMonths } from "date-fns"
 import { PrintButton } from "./print-button"
+import { CalendarExportFilter } from "@/components/calendar-export-filter"
 
 interface Props {
-  searchParams: { year?: string }
+  searchParams: { year?: string; campusId?: string; departmentId?: string; professorId?: string }
 }
 
 const DEPT_ABBREVS: Record<string, string> = {
@@ -32,9 +33,8 @@ function formatProfName(fullName: string | null | undefined): string {
   return fullName?.trim() || "Unknown"
 }
 
-// Returns Mon-based day-of-week: Mon=0 … Sun=6
 function mondayDow(date: Date): number {
-  const d = getDay(date) // Sun=0 … Sat=6
+  const d = getDay(date)
   return d === 0 ? 6 : d - 1
 }
 
@@ -51,6 +51,8 @@ export default async function CalendarExportPage({ searchParams }: Props) {
   const { start, end, label } = getAcademicYearFromStartYear(selectedStartYear)
 
   const role = session.user.role
+
+  // Role-based scope — always applied
   const scopeFilter: Record<string, unknown> = {}
   if (canApproveStep1(role) && session.user.campusId) {
     scopeFilter.campusId = session.user.campusId
@@ -58,24 +60,69 @@ export default async function CalendarExportPage({ searchParams }: Props) {
     scopeFilter.departmentId = session.user.departmentId
   }
 
-  const requests = await db.leaveRequest.findMany({
-    where: {
-      status: "APPROVED",
-      submittedAt: { gte: start, lte: end },
-      ...(Object.keys(scopeFilter).length > 0 ? { professor: scopeFilter } : {}),
-    },
-    select: {
-      dates: true,
-      professor: {
-        select: {
-          name: true,
-          department: { select: { name: true } },
+  const canFilter = canBypassApproval(role)
+
+  const [allRequests, holidays, campuses, departments] = await Promise.all([
+    db.leaveRequest.findMany({
+      where: {
+        status: "APPROVED",
+        submittedAt: { gte: start, lte: end },
+        ...(Object.keys(scopeFilter).length > 0 ? { professor: scopeFilter } : {}),
+      },
+      include: {
+        professor: {
+          include: {
+            campus: { select: { name: true } },
+            department: { select: { name: true } },
+          },
         },
       },
-    },
+    }),
+    db.holiday.findMany({
+      where: { date: { gte: start, lte: end } },
+      select: { date: true, label: true },
+    }),
+    canFilter ? db.campus.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
+    canFilter ? db.department.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
+  ])
+
+  // Derive unique professors who have approved leave this year (for the dropdown)
+  const profMap = new Map<string, { id: string; name: string | null; email: string }>()
+  for (const req of allRequests) {
+    if (!profMap.has(req.professorId)) {
+      profMap.set(req.professorId, {
+        id: req.professorId,
+        name: req.professor.name,
+        email: req.professor.email,
+      })
+    }
+  }
+  const professors = Array.from(profMap.values()).sort((a, b) =>
+    (a.name ?? a.email).localeCompare(b.name ?? b.email)
+  )
+
+  // Additional filter from searchParams (only for bypass-capable roles)
+  const selectedCampusId = canFilter ? (searchParams.campusId ?? "") : ""
+  const selectedDepartmentId = canFilter ? (searchParams.departmentId ?? "") : ""
+  const selectedProfessorId = canFilter ? (searchParams.professorId ?? "") : ""
+
+  // Filter requests in memory — all active filters applied together (AND)
+  const requests = allRequests.filter((req) => {
+    if (selectedCampusId     && req.professor.campusId     !== selectedCampusId)     return false
+    if (selectedDepartmentId && req.professor.departmentId !== selectedDepartmentId) return false
+    if (selectedProfessorId  && req.professorId            !== selectedProfessorId)  return false
+    return true
   })
 
-  // Build day map: "YYYY-MM-DD" → display strings (deduplicated per professor per day)
+  // Build filter label from whichever filters are active
+  const filterParts = [
+    selectedCampusId     ? (campuses.find((c) => c.id === selectedCampusId)?.name ?? "")                    : "",
+    selectedDepartmentId ? (departments.find((d) => d.id === selectedDepartmentId)?.name ?? "")              : "",
+    selectedProfessorId  ? (profMap.get(selectedProfessorId)?.name ?? profMap.get(selectedProfessorId)?.email ?? "") : "",
+  ].filter(Boolean)
+  const filterLabel = filterParts.join(" · ")
+
+  // Build day map: "yyyy-MM-dd" → display strings
   const dayMap = new Map<string, string[]>()
   for (const req of requests) {
     const profDisplay = `${formatProfName(req.professor.name)} — ${deptAbbrev(req.professor.department?.name)}`
@@ -86,15 +133,18 @@ export default async function CalendarExportPage({ searchParams }: Props) {
       if (!list.includes(profDisplay)) list.push(profDisplay)
     }
   }
-  // Sort each day alphabetically
   dayMap.forEach((list) => list.sort())
 
-  // 12 months starting from Oct (month index 9)
+  // Holiday map: "yyyy-MM-dd" → label
+  const holidayMap = new Map<string, string>()
+  for (const h of holidays) {
+    holidayMap.set(format(h.date, "yyyy-MM-dd"), h.label ?? "Holiday")
+  }
+
   const months: Date[] = Array.from({ length: 12 }, (_, i) => addMonths(start, i))
 
   return (
     <>
-      {/* Print CSS — hides nav, sets page size, forces page breaks */}
       <style>{`
         @media print {
           header { display: none !important; }
@@ -106,18 +156,33 @@ export default async function CalendarExportPage({ searchParams }: Props) {
       `}</style>
 
       {/* Screen toolbar */}
-      <div className="print:hidden flex items-center justify-between px-6 py-4 border-b mb-2 bg-white sticky top-0 z-10">
+      <div className="print:hidden flex items-center justify-between gap-4 px-6 py-4 border-b mb-2 bg-white sticky top-0 z-10 flex-wrap">
         <div>
           <h1 className="text-lg font-bold">Leave Calendar — {label}</h1>
           <p className="text-xs text-gray-500">
+            {filterLabel ? `${filterLabel} · ` : ""}
             {canApproveStep1(role)
-              ? "Your campus · Approved leave · one month per page"
+              ? "Your campus · "
               : canApproveStep2(role)
-              ? "Your department · Approved leave · one month per page"
-              : "Approved leave · one month per page"}
+              ? "Your department · "
+              : ""}
+            Approved leave · one month per page
           </p>
         </div>
-        <PrintButton />
+        <div className="flex items-center gap-3 flex-wrap">
+          {canFilter && (
+            <CalendarExportFilter
+              campuses={campuses}
+              departments={departments}
+              professors={professors}
+              year={selectedStartYear}
+              currentCampusId={selectedCampusId}
+              currentDepartmentId={selectedDepartmentId}
+              currentProfessorId={selectedProfessorId}
+            />
+          )}
+          <PrintButton />
+        </div>
       </div>
 
       {/* Calendar pages */}
@@ -128,7 +193,6 @@ export default async function CalendarExportPage({ searchParams }: Props) {
         const leadingEmpties = mondayDow(new Date(year, month, 1))
         const monthLabel = format(monthStart, "MMMM yyyy")
 
-        // Grid cells: null = filler, number = day-of-month
         const cells: (number | null)[] = [
           ...Array<null>(leadingEmpties).fill(null),
           ...Array.from({ length: daysCount }, (_, i) => i + 1),
@@ -137,14 +201,14 @@ export default async function CalendarExportPage({ searchParams }: Props) {
 
         return (
           <div key={monthLabel} className="month-page px-4 py-3">
-            {/* Month header */}
-            <h2 className="text-base font-bold text-center mb-2 tracking-wide uppercase text-gray-800">
+            <h2 className="text-base font-bold text-center tracking-wide uppercase text-gray-800">
               {monthLabel}
             </h2>
+            {filterLabel && (
+              <p className="text-center text-[10px] text-gray-400 mb-1">{filterLabel}</p>
+            )}
 
-            {/* Calendar grid — gap-px on gray bg renders as solid grid lines */}
-            <div className="grid grid-cols-7 gap-px bg-gray-300 border border-gray-300 text-xs">
-              {/* Day-of-week header */}
+            <div className="grid grid-cols-7 gap-px bg-gray-300 border border-gray-300 text-xs mt-2">
               {DAY_HEADERS.map((d) => (
                 <div
                   key={d}
@@ -154,15 +218,9 @@ export default async function CalendarExportPage({ searchParams }: Props) {
                 </div>
               ))}
 
-              {/* Day cells */}
               {cells.map((day, i) => {
                 if (day === null) {
-                  return (
-                    <div
-                      key={`filler-${i}`}
-                      className="bg-gray-50 min-h-[72px]"
-                    />
-                  )
+                  return <div key={`filler-${i}`} className="bg-gray-50 min-h-[72px]" />
                 }
 
                 const dateObj = new Date(year, month, day)
@@ -171,16 +229,23 @@ export default async function CalendarExportPage({ searchParams }: Props) {
                 const dow = mondayDow(dateObj)
                 const isWeekend = dow === 5 || dow === 6
                 const isBlocked = isBlockedDate(dateObj)
-                const muted = isWeekend || isBlocked
+                const holidayLabel = holidayMap.get(dateKey)
+                const isHoliday = !!holidayLabel
+                const muted = isWeekend || isBlocked || isHoliday
 
                 return (
                   <div
                     key={dateKey}
-                    className={`min-h-[72px] p-1 ${muted ? "bg-gray-100" : "bg-white"}`}
+                    className={`min-h-[72px] p-1 ${isHoliday ? "bg-amber-50" : muted ? "bg-gray-100" : "bg-white"}`}
                   >
                     <span className={`text-[10px] font-bold block mb-0.5 ${muted ? "text-gray-400" : "text-gray-700"}`}>
                       {day}
                     </span>
+                    {isHoliday && (
+                      <span className="block text-[9px] leading-tight text-amber-700 italic truncate">
+                        {holidayLabel}
+                      </span>
+                    )}
                     {!muted && entries.map((name, ei) => (
                       <span key={ei} className="block text-[9px] leading-tight text-gray-800 truncate">
                         {name}
@@ -190,13 +255,6 @@ export default async function CalendarExportPage({ searchParams }: Props) {
                 )
               })}
             </div>
-
-            {/* Legend — only on first month on screen */}
-            {monthLabel === format(months[0], "MMMM yyyy") && (
-              <p className="print:hidden mt-2 text-[10px] text-gray-400 text-right">
-                Format: First Last Initial — Department Abbreviation
-              </p>
-            )}
           </div>
         )
       })}

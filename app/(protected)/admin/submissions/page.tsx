@@ -11,11 +11,10 @@ import {
 } from "@/types/enums"
 import { Suspense } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SubmissionsFilter } from "@/components/submissions-filter"
 import { BulkSubmissionsTable } from "@/components/bulk-submissions-table"
-import { ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
+import { ClipboardList, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 
 interface Props {
@@ -96,14 +95,6 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Submissions</h1>
-        {canBypassApproval(role) && (
-          <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <a href="/api/admin/export" download>
-              <Download className="w-4 h-4" />
-              Export by Professor
-            </a>
-          </Button>
-        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
