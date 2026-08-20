@@ -22,7 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user }) {
       if (!user?.id) return false
-      if (!user.email?.endsWith("@liu.edu.lb")) return "/auth/error?error=DomainRestricted"
+
       const dbUser = await db.user.findUnique({
         where: { id: user.id },
         select: { blocked: true },
