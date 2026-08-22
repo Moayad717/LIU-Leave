@@ -167,27 +167,37 @@ export default async function SubmissionDetailPage({ params }: Props) {
           <InfoRow icon={CalendarDays} label="Days requested" value={String(req.dates.length)} />
           <InfoRow icon={Clock} label="Submitted" value={format(req.submittedAt, "MMMM d, yyyy 'at' h:mm a")} />
           {req.submittedAt && (() => {
+            // Use reviewedById (not At) so older records without timestamps still show.
+            // Suppress the final entry if reviewedById is the same person already shown
+            // in step1 or step2 (avoids duplicates when step1/step2 also writes reviewedById).
+            const finalIsDuplicate =
+              req.reviewedById &&
+              (req.reviewedById === req.step1ReviewedById || req.reviewedById === req.step2ReviewedById)
+
             const steps = [
-              req.step1ReviewedAt && {
+              req.step1ReviewedById && {
                 label: "Step 1 — Asst. Dean",
-                reviewer: req.step1ReviewedBy?.name ?? req.step1ReviewedBy?.email ?? "unknown",
+                reviewer: req.step1ReviewedBy?.name ?? req.step1ReviewedBy?.email ?? "Unknown",
                 at: req.step1ReviewedAt,
                 comment: req.step1Comment,
               },
-              req.step2ReviewedAt && {
+              req.step2ReviewedById && {
                 label: "Step 2 — Chairman",
-                reviewer: req.step2ReviewedBy?.name ?? req.step2ReviewedBy?.email ?? "unknown",
+                reviewer: req.step2ReviewedBy?.name ?? req.step2ReviewedBy?.email ?? "Unknown",
                 at: req.step2ReviewedAt,
                 comment: req.step2Comment,
               },
-              // Show final step whenever it happened (bypass or normal step 3)
-              req.reviewedAt && {
-                label: req.step1ReviewedAt && req.step2ReviewedAt ? "Step 3 — Dean" : "Reviewed (bypassed)",
-                reviewer: req.reviewedBy?.name ?? req.reviewedBy?.email ?? "unknown",
+              req.reviewedById && !finalIsDuplicate && {
+                label: req.step1ReviewedById && req.step2ReviewedById
+                  ? "Step 3 — Dean"
+                  : req.step1ReviewedById
+                  ? "Bypassed — Dean"
+                  : "Reviewed",
+                reviewer: req.reviewedBy?.name ?? req.reviewedBy?.email ?? "Unknown",
                 at: req.reviewedAt,
                 comment: req.adminComment,
               },
-            ].filter(Boolean) as { label: string; reviewer: string; at: Date; comment: string | null }[]
+            ].filter(Boolean) as { label: string; reviewer: string; at: Date | null; comment: string | null }[]
 
             if (!steps.length) return null
             return (
@@ -200,7 +210,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
                   {steps.map((s, i) => (
                     <div key={i} className="text-xs">
                       <p className="font-medium text-foreground">{s.label}</p>
-                      <p className="text-muted-foreground">{s.reviewer} · {format(s.at, "MMM d, yyyy")}</p>
+                      <p className="text-muted-foreground">{s.reviewer}{s.at ? ` · ${format(s.at, "MMM d, yyyy")}` : ""}</p>
                       {s.comment && <p className="italic text-muted-foreground mt-0.5">"{s.comment}"</p>}
                     </div>
                   ))}
