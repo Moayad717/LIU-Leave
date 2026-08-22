@@ -167,33 +167,34 @@ export default async function SubmissionDetailPage({ params }: Props) {
           <InfoRow icon={CalendarDays} label="Days requested" value={String(req.dates.length)} />
           <InfoRow icon={Clock} label="Submitted" value={format(req.submittedAt, "MMMM d, yyyy 'at' h:mm a")} />
           {req.submittedAt && (() => {
-            // Use reviewedById (not At) so older records without timestamps still show.
-            // Suppress the final entry if reviewedById is the same person already shown
-            // in step1 or step2 (avoids duplicates when step1/step2 also writes reviewedById).
-            const finalIsDuplicate =
-              req.reviewedById &&
-              (req.reviewedById === req.step1ReviewedById || req.reviewedById === req.step2ReviewedById)
+            // Use the relation objects (which are fetched) as presence checks.
+            // Suppress final-reviewer entry only if it's the same person already shown
+            // in step1 or step2 (every action also writes reviewedBy, causing duplicates).
+            const step1Name = req.step1ReviewedBy?.name ?? req.step1ReviewedBy?.email
+            const step2Name = req.step2ReviewedBy?.name ?? req.step2ReviewedBy?.email
+            const finalName = req.reviewedBy?.name ?? req.reviewedBy?.email
+            const finalIsDuplicate = finalName && (finalName === step1Name || finalName === step2Name)
 
             const steps = [
-              req.step1ReviewedById && {
+              req.step1ReviewedBy && {
                 label: "Step 1 — Asst. Dean",
-                reviewer: req.step1ReviewedBy?.name ?? req.step1ReviewedBy?.email ?? "Unknown",
+                reviewer: step1Name ?? "Unknown",
                 at: req.step1ReviewedAt,
                 comment: req.step1Comment,
               },
-              req.step2ReviewedById && {
+              req.step2ReviewedBy && {
                 label: "Step 2 — Chairman",
-                reviewer: req.step2ReviewedBy?.name ?? req.step2ReviewedBy?.email ?? "Unknown",
+                reviewer: step2Name ?? "Unknown",
                 at: req.step2ReviewedAt,
                 comment: req.step2Comment,
               },
-              req.reviewedById && !finalIsDuplicate && {
-                label: req.step1ReviewedById && req.step2ReviewedById
+              req.reviewedBy && !finalIsDuplicate && {
+                label: req.step1ReviewedBy && req.step2ReviewedBy
                   ? "Step 3 — Dean"
-                  : req.step1ReviewedById
+                  : req.step1ReviewedBy
                   ? "Bypassed — Dean"
                   : "Reviewed",
-                reviewer: req.reviewedBy?.name ?? req.reviewedBy?.email ?? "Unknown",
+                reviewer: finalName ?? "Unknown",
                 at: req.reviewedAt,
                 comment: req.adminComment,
               },
