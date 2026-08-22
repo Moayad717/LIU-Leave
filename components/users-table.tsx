@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { format } from "date-fns"
-import { Search, ShieldOff, Shield, Trash2 } from "lucide-react"
+import { Search, ShieldOff, Shield, Trash2, ChevronsUpDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,9 +23,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { RoleToggle } from "@/components/role-toggle"
-import { getRoleLabel, canAssignRole, type Role } from "@/types/enums"
+import { getRoleLabel, canAssignRole, Role, type Role as RoleType } from "@/types/enums"
 import { blockUser, deleteUser } from "@/actions/admin"
+
+const ROLE_OPTIONS: RoleType[] = [
+  Role.SUPER_ADMIN, Role.DEAN, Role.COORDINATOR,
+  Role.ASSISTANT_DEAN, Role.CHAIRMAN, Role.PROFESSOR,
+]
 import { toast } from "sonner"
 
 interface Campus { id: string; name: string }
@@ -39,8 +51,8 @@ interface UserRow {
   role: Role
   blocked: boolean
   createdAt: Date
-  campus: { name: string } | null
-  department: { name: string } | null
+  campus: { id: string; name: string } | null
+  department: { id: string; name: string } | null
 }
 
 interface Props {
@@ -49,6 +61,55 @@ interface Props {
   currentUserRole: Role
   campuses: Campus[]
   departments: Department[]
+}
+
+function SortHeader({
+  label,
+  options,
+  selected,
+  onSelect,
+}: {
+  label: string
+  options: { value: string; label: string }[]
+  selected: string
+  onSelect: (v: string) => void
+}) {
+  const selectedLabel = options.find((o) => o.value === selected)?.label
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1.5 -ml-1 px-1 py-0.5 rounded hover:bg-muted/60 hover:text-foreground">
+          {label}
+          {selectedLabel ? (
+            <span className="text-[11px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+              {selectedLabel}
+            </span>
+          ) : (
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/40" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[160px]">
+        {selected && (
+          <>
+            <DropdownMenuItem className="text-muted-foreground text-xs" onClick={() => onSelect("")}>
+              Clear sort
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {options.map((opt) => (
+          <DropdownMenuItem
+            key={opt.value}
+            onClick={() => onSelect(opt.value)}
+            className={selected === opt.value ? "font-medium bg-primary/5 text-primary" : ""}
+          >
+            {opt.label} first
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 function RoleBadge({ role }: { role: Role }) {
@@ -70,7 +131,20 @@ function RoleBadge({ role }: { role: Role }) {
 
 export function UsersTable({ users, currentUserId, currentUserRole, campuses, departments }: Props) {
   const [search, setSearch] = useState("")
+  const [sortCampusId, setSortCampusId] = useState("")
+  const [sortDeptId, setSortDeptId] = useState("")
+  const [sortRole, setSortRole] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
+
+  const campusOptions = Array.from(
+    new Map(users.filter((u) => u.campus).map((u) => [u.campus!.id, u.campus!.name])).entries()
+  ).map(([id, name]) => ({ value: id, label: name })).sort((a, b) => a.label.localeCompare(b.label))
+
+  const deptOptions = Array.from(
+    new Map(users.filter((u) => u.department).map((u) => [u.department!.id, u.department!.name])).entries()
+  ).map(([id, name]) => ({ value: id, label: name })).sort((a, b) => a.label.localeCompare(b.label))
+
+  const roleOptions = ROLE_OPTIONS.map((r) => ({ value: r, label: getRoleLabel(r) }))
   const [isPending, startTransition] = useTransition()
 
   const filtered = search.trim()
@@ -84,7 +158,21 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
           getRoleLabel(u.role).toLowerCase().includes(q)
         )
       })
-    : users
+    : [...users]
+
+  if (sortCampusId || sortDeptId || sortRole) {
+    filtered.sort((a, b) => {
+      const aScore =
+        (sortCampusId && a.campus?.id === sortCampusId ? 4 : 0) +
+        (sortDeptId   && a.department?.id === sortDeptId ? 2 : 0) +
+        (sortRole     && a.role === sortRole ? 1 : 0)
+      const bScore =
+        (sortCampusId && b.campus?.id === sortCampusId ? 4 : 0) +
+        (sortDeptId   && b.department?.id === sortDeptId ? 2 : 0) +
+        (sortRole     && b.role === sortRole ? 1 : 0)
+      return bScore - aScore
+    })
+  }
 
   function handleBlock(user: UserRow) {
     startTransition(async () => {
@@ -107,14 +195,16 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
 
   return (
     <div className="space-y-4">
-      <div className="relative px-6 pt-2">
-        <Search className="absolute left-9 top-4.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, email, campus, department or role..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 max-w-sm"
-        />
+      <div className="flex flex-wrap items-center gap-3 px-6 pt-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, email, campus, department or role..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 max-w-sm"
+          />
+        </div>
       </div>
 
       {filtered.length === 0 ? (
@@ -126,9 +216,15 @@ export function UsersTable({ users, currentUserId, currentUserRole, campuses, de
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Campus</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Role</TableHead>
+              <TableHead>
+                <SortHeader label="Campus" options={campusOptions} selected={sortCampusId} onSelect={setSortCampusId} />
+              </TableHead>
+              <TableHead>
+                <SortHeader label="Department" options={deptOptions} selected={sortDeptId} onSelect={setSortDeptId} />
+              </TableHead>
+              <TableHead>
+                <SortHeader label="Role" options={roleOptions} selected={sortRole} onSelect={setSortRole} />
+              </TableHead>
               <TableHead>Joined</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>

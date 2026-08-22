@@ -50,7 +50,9 @@ export default async function SubmissionDetailPage({ params }: Props) {
       where: { id: params.id },
       include: {
         professor: { include: { campus: true, department: true } },
-        reviewedBy: { select: { name: true, email: true } },
+        reviewedBy:      { select: { name: true, email: true } },
+        step1ReviewedBy: { select: { name: true, email: true } },
+        step2ReviewedBy: { select: { name: true, email: true } },
       },
     }),
     db.appSettings.findUnique({ where: { id: "global" } }),
@@ -158,19 +160,54 @@ export default async function SubmissionDetailPage({ params }: Props) {
             <StatusBadge status={req.status} />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="">
           <InfoRow icon={User} label="Professor" value={req.professor.name ?? req.professor.email} />
           <InfoRow icon={Building} label="Campus" value={req.professor.campus?.name ?? "—"} />
           <InfoRow icon={Building} label="Department" value={req.professor.department?.name ?? "—"} />
           <InfoRow icon={CalendarDays} label="Days requested" value={String(req.dates.length)} />
           <InfoRow icon={Clock} label="Submitted" value={format(req.submittedAt, "MMMM d, yyyy 'at' h:mm a")} />
-          {req.reviewedAt && (
-            <InfoRow
-              icon={CheckCircle2}
-              label="Last reviewed"
-              value={`${format(req.reviewedAt, "MMMM d, yyyy")} by ${req.reviewedBy?.name ?? req.reviewedBy?.email ?? "unknown"}`}
-            />
-          )}
+          {req.submittedAt && (() => {
+            const steps = [
+              req.step1ReviewedAt && {
+                label: "Step 1 — Asst. Dean",
+                reviewer: req.step1ReviewedBy?.name ?? req.step1ReviewedBy?.email ?? "unknown",
+                at: req.step1ReviewedAt,
+                comment: req.step1Comment,
+              },
+              req.step2ReviewedAt && {
+                label: "Step 2 — Chairman",
+                reviewer: req.step2ReviewedBy?.name ?? req.step2ReviewedBy?.email ?? "unknown",
+                at: req.step2ReviewedAt,
+                comment: req.step2Comment,
+              },
+              // Final step: only show if it's a bypass (no step1) OR after step2
+              req.reviewedAt && (!req.step1ReviewedAt || req.step2ReviewedAt || canBypassApproval(role)) && {
+                label: req.step1ReviewedAt ? "Step 3 — Dean" : "Reviewed",
+                reviewer: req.reviewedBy?.name ?? req.reviewedBy?.email ?? "unknown",
+                at: req.reviewedAt,
+                comment: req.adminComment,
+              },
+            ].filter(Boolean) as { label: string; reviewer: string; at: Date; comment: string | null }[]
+
+            if (!steps.length) return null
+            return (
+              <div className="pt-1">
+                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Review history
+                </p>
+                <div className="space-y-2 pl-5 border-l-2 border-muted">
+                  {steps.map((s, i) => (
+                    <div key={i} className="text-xs">
+                      <p className="font-medium text-foreground">{s.label}</p>
+                      <p className="text-muted-foreground">{s.reviewer} · {format(s.at, "MMM d, yyyy")}</p>
+                      {s.comment && <p className="italic text-muted-foreground mt-0.5">"{s.comment}"</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
 
@@ -225,25 +262,22 @@ export default async function SubmissionDetailPage({ params }: Props) {
       )}
 
       {canReview && (
-        <>
-          <Separator />
-          <Card className="border-2 border-dashed">
-            <CardHeader>
-              <CardTitle className="text-base">Review Request</CardTitle>
-              <CardDescription>
-                Approve or reject this leave request.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ReviewForm
-                requestId={req.id}
-                dates={sortedDates.map((d) => d.toISOString())}
-                callerRole={role}
-                requestStatus={req.status}
-              />
-            </CardContent>
-          </Card>
-        </>
+        <Card className="border-primary/20 bg-primary/[0.02]">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Your Decision</CardTitle>
+            <CardDescription>
+              Approve or reject this leave request. Your action will be logged.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ReviewForm
+              requestId={req.id}
+              dates={sortedDates.map((d) => d.toISOString())}
+              callerRole={role}
+              requestStatus={req.status}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   )
@@ -259,12 +293,12 @@ function InfoRow({
   value: string
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium">{value}</p>
+    <div className="flex items-center gap-3 py-2.5 border-b last:border-0">
+      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted shrink-0">
+        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
+      <span className="text-xs text-muted-foreground w-28 shrink-0">{label}</span>
+      <span className="text-sm font-medium">{value}</span>
     </div>
   )
 }

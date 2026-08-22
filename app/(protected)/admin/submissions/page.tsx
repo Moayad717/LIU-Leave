@@ -14,7 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import { SubmissionsFilter } from "@/components/submissions-filter"
 import { BulkSubmissionsTable } from "@/components/bulk-submissions-table"
-import { ClipboardList, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ClipboardList, Clock, CheckCircle2, XCircle, Download } from "lucide-react"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
 
 interface Props {
@@ -41,9 +42,6 @@ export default async function SubmissionsPage({ searchParams }: Props) {
   }
 
   const professorWhere: Record<string, unknown> = { ...scopeFilter }
-  if (searchParams.campus && canBypassApproval(role)) {
-    professorWhere.campusId = searchParams.campus
-  }
   if (searchParams.search) {
     professorWhere.OR = [
       { name: { contains: searchParams.search, mode: "insensitive" } },
@@ -80,6 +78,15 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     availableYears.push(y)
   }
 
+  // Sort selected campus to top (without hiding the rest)
+  if (searchParams.campus && canBypassApproval(role)) {
+    requests.sort((a, b) => {
+      const aMatch = a.professor.campusId === searchParams.campus ? -1 : 1
+      const bMatch = b.professor.campusId === searchParams.campus ? -1 : 1
+      return aMatch - bMatch
+    })
+  }
+
   const rejectedStatuses = [LeaveStatus.REJECTED, LeaveStatus.STEP1_REJECTED, LeaveStatus.STEP2_REJECTED]
 
   const counts = {
@@ -95,6 +102,14 @@ export default async function SubmissionsPage({ searchParams }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Submissions</h1>
+        {canBypassApproval(role) && (
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <a href="/api/admin/submissions-export" download>
+              <Download className="w-4 h-4" />
+              Export
+            </a>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

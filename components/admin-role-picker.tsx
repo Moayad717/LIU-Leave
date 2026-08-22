@@ -9,11 +9,9 @@ interface Props {
 export function AdminRolePicker({ name }: Props) {
   return (
     <div className="space-y-6 max-w-xl">
-      <div className="rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 px-6 py-5">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {name}
-        </h1>
-        <p className="text-muted-foreground mt-0.5">How would you like to continue?</p>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Welcome back, {name}</h1>
+        <p className="text-muted-foreground mt-1 text-sm">How would you like to continue?</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

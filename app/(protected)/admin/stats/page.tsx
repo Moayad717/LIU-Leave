@@ -1,18 +1,19 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
-import { canAccessAdmin } from "@/types/enums"
+import { canAccessAdmin, canApproveStep1, canApproveStep2 } from "@/types/enums"
 import { getCurrentAcademicYear, getAcademicYearFromStartYear } from "@/lib/academic-year"
-import { format, getMonth } from "date-fns"
+import { format, getMonth, eachDayOfInterval } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarHeatmap } from "@/components/calendar-heatmap"
+import { AvailabilityHeatmap } from "@/components/availability-heatmap"
 import { CampusBreakdown } from "@/components/campus-breakdown"
 import type { CampusEntry } from "@/components/campus-breakdown"
 import { ProfsTable } from "@/components/profs-table"
 import { YearFilter } from "@/components/year-filter"
-import { AlertTriangle, CalendarDays, Building, User, CheckCircle2, CalendarRange } from "lucide-react"
+import { AlertTriangle, CalendarDays, Building, User, CheckCircle2, CalendarRange, UserCheck } from "lucide-react"
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -27,15 +28,29 @@ export default async function StatsPage({ searchParams }: Props) {
   const session = await auth()
   if (!session || !canAccessAdmin(session.user.role)) redirect("/dashboard")
 
+  const role = session.user.role
   const currentYear = getCurrentAcademicYear()
   const selectedStartYear = searchParams.year ? parseInt(searchParams.year) : currentYear.start.getFullYear()
   const { start, end, label } = getAcademicYearFromStartYear(selectedStartYear)
 
-  const [approvedRequests, appSettings, earliest] = await Promise.all([
+  // Role-based scope (same pattern as submissions page)
+  const scopeFilter: Record<string, unknown> = {}
+  if (canApproveStep1(role) && session.user.campusId) {
+    scopeFilter.campusId = session.user.campusId
+  } else if (canApproveStep2(role) && session.user.departmentId) {
+    scopeFilter.departmentId = session.user.departmentId
+  }
+  const professorWhere = Object.keys(scopeFilter).length > 0 ? { professor: scopeFilter } : {}
+
+  const [approvedRequests, professors, appSettings, earliest] = await Promise.all([
     db.leaveRequest.findMany({
-      where: { status: "APPROVED", submittedAt: { gte: start, lte: end } },
+      where: { status: "APPROVED", submittedAt: { gte: start, lte: end }, ...professorWhere },
       include: { professor: { include: { campus: true, department: true } } },
       orderBy: { submittedAt: "desc" },
+    }),
+    db.user.findMany({
+      where: { role: "PROFESSOR", ...scopeFilter },
+      select: { id: true, name: true, email: true, campus: { select: { name: true } } },
     }),
     db.appSettings.findUnique({ where: { id: "global" } }),
     db.leaveRequest.findFirst({ orderBy: { submittedAt: "asc" }, select: { submittedAt: true } }),
@@ -70,6 +85,30 @@ export default async function StatsPage({ searchParams }: Props) {
         heatmapDetails[key].push({ name: profName, campus: campusName })
       }
     }
+  }
+
+  // Availability heatmap data
+  const totalProfessors = professors.length
+  const allProfessors = professors.map((p) => ({
+    id: p.id,
+    name: p.name ?? p.email,
+    campus: p.campus?.name ?? "—",
+  }))
+  const onLeaveByDay: Record<string, Set<string>> = {}
+  for (const req of approvedRequests) {
+    for (const date of req.dates) {
+      const key = format(date, "yyyy-MM-dd")
+      if (!onLeaveByDay[key]) onLeaveByDay[key] = new Set()
+      onLeaveByDay[key].add(req.professorId)
+    }
+  }
+  const availData: Record<string, number> = {}
+  const onLeaveIdsByDay: Record<string, string[]> = {}
+  for (const day of eachDayOfInterval({ start, end })) {
+    const key = format(day, "yyyy-MM-dd")
+    const ids = onLeaveByDay[key]
+    availData[key] = totalProfessors - (ids?.size ?? 0)
+    if (ids && ids.size > 0) onLeaveIdsByDay[key] = Array.from(ids)
   }
 
   interface CampusTotals {
@@ -246,10 +285,14 @@ export default async function StatsPage({ searchParams }: Props) {
       </div>
 
       <Tabs defaultValue="heatmap">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="heatmap" className="gap-1.5">
             <CalendarDays className="w-3.5 h-3.5" />
-            Heatmap
+            Leave
+          </TabsTrigger>
+          <TabsTrigger value="availability" className="gap-1.5">
+            <UserCheck className="w-3.5 h-3.5" />
+            Available
           </TabsTrigger>
           <TabsTrigger value="campus" className="gap-1.5">
             <Building className="w-3.5 h-3.5" />
@@ -268,6 +311,27 @@ export default async function StatsPage({ searchParams }: Props) {
             </CardHeader>
             <CardContent>
               <CalendarHeatmap data={heatmapData} details={heatmapDetails} startDate={start} endDate={end} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="availability">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Availability Heatmap — {label}</CardTitle>
+              <CardDescription>
+                Shows how many professors are present each day. Green = full attendance, red = many on leave.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AvailabilityHeatmap
+                availData={availData}
+                onLeaveIds={onLeaveIdsByDay}
+                allProfessors={allProfessors}
+                totalProfessors={totalProfessors}
+                startDate={start}
+                endDate={end}
+              />
             </CardContent>
           </Card>
         </TabsContent>
