@@ -64,10 +64,8 @@ export function AvailabilityHeatmap({
     () => new Set(displayDay ? (onLeaveIds[displayDay] ?? []) : []),
     [displayDay, onLeaveIds]
   )
-  const onLeaveProfs   = useMemo(() => allProfessors.filter((p) => onLeaveSet.has(p.id)),  [allProfessors, onLeaveSet])
   const availableProfs = useMemo(() => allProfessors.filter((p) => !onLeaveSet.has(p.id)), [allProfessors, onLeaveSet])
-  const availByCampus  = useMemo(() => groupByCampus(availableProfs),  [availableProfs])
-  const leaveByCampus  = useMemo(() => groupByCampus(onLeaveProfs),    [onLeaveProfs])
+  const availByCampus  = useMemo(() => groupByCampus(availableProfs), [availableProfs])
   const allPresent     = displayDay ? onLeaveSet.size === 0 : false
 
   const weeks = useMemo(() => {
@@ -100,8 +98,8 @@ export function AvailabilityHeatmap({
           {DAY_LABELS.map((d) => (
             <div
               key={d}
-              className={`w-7 text-center text-[11px] font-medium ${
-                d === "Sun" || d === "Sat" ? "text-muted-foreground/50" : "text-muted-foreground"
+              className={`w-9 text-center text-[11px] font-medium ${
+                d === "Sun" || d === "Sat" ? "text-muted-foreground/60" : "text-muted-foreground"
               }`}
             >
               {d}
@@ -132,17 +130,16 @@ export function AvailabilityHeatmap({
                     onClick={() => { if (!isInRange) return; setPinnedDay(pinnedDay === key ? null : key) }}
                     title={isInRange ? format(day, "MMM d") : undefined}
                     className={[
-                      "w-7 h-7 rounded-md flex items-center justify-center transition-all select-none",
+                      "w-9 h-9 rounded-lg flex items-center justify-center transition-all select-none",
                       isInRange ? "cursor-pointer" : "opacity-0 pointer-events-none",
                       isInRange ? cellColor(avail, totalProfessors) : "",
-                      weekend && isInRange ? "opacity-50" : "",
                       isPinned ? "ring-2 ring-gray-800 ring-offset-1" : "",
                       isHovered && !isPinned ? "ring-2 ring-emerald-500 ring-offset-1" : "",
                       isToday && isInRange ? "outline outline-2 outline-offset-1 outline-primary" : "",
                     ].join(" ")}
                   >
                     {isInRange && (
-                      <span className={`text-[10px] font-semibold leading-none ${textColor(avail, totalProfessors)} ${isToday ? "font-bold" : ""}`}>
+                      <span className={`text-[11px] font-semibold leading-none ${textColor(avail, totalProfessors)}`}>
                         {day.getDate()}
                       </span>
                     )}
@@ -183,7 +180,6 @@ export function AvailabilityHeatmap({
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {availableProfs.length} / {totalProfessors} available
-                  {onLeaveProfs.length > 0 && ` · ${onLeaveProfs.length} on leave`}
                 </p>
               </div>
               {pinnedDay && (
@@ -199,54 +195,21 @@ export function AvailabilityHeatmap({
             {allPresent ? (
               <p className="text-sm font-medium text-emerald-700">All professors available — full attendance.</p>
             ) : (
-              <div className="space-y-4">
-                {/* Available */}
-                <div>
-                  <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide mb-1.5">
-                    Available ({availableProfs.length})
-                  </p>
-                  <div className="space-y-2">
-                    {availByCampus.map(([campus, names]) => (
-                      <div key={campus}>
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                          {campus}
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {names.map((n) => (
-                            <span key={n} className="rounded-md border bg-background px-2 py-0.5 text-xs font-medium">
-                              {n}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* On leave */}
-                {onLeaveProfs.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide mb-1.5">
-                      On leave ({onLeaveProfs.length})
+              <div className="space-y-2">
+                {availByCampus.map(([campus, names]) => (
+                  <div key={campus}>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      {campus}
                     </p>
-                    <div className="space-y-2">
-                      {leaveByCampus.map(([campus, names]) => (
-                        <div key={campus}>
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                            {campus}
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {names.map((n) => (
-                              <span key={n} className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 opacity-75">
-                                {n}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {names.map((n) => (
+                        <span key={n} className="rounded-md border bg-background px-2 py-0.5 text-xs font-medium">
+                          {n}
+                        </span>
                       ))}
                     </div>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </>
