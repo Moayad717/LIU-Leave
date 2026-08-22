@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react"
 import Link from "next/link"
 import { format } from "date-fns"
-import { ClipboardList, ChevronRight, CheckCheck } from "lucide-react"
+import { ClipboardList, ChevronRight, CheckCheck, ChevronsUpDown } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -14,8 +14,64 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { bulkApproveRequests } from "@/actions/admin"
 import { isRejected, LeaveStatus } from "@/types/enums"
+
+function SortHeader({
+  label,
+  options,
+  selected,
+  onSelect,
+}: {
+  label: string
+  options: { value: string; label: string }[]
+  selected: string
+  onSelect: (v: string) => void
+}) {
+  const selectedLabel = options.find((o) => o.value === selected)?.label
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1.5 -ml-1 px-1 py-0.5 rounded hover:bg-muted/60 hover:text-foreground">
+          {label}
+          {selectedLabel ? (
+            <span className="text-[11px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+              {selectedLabel}
+            </span>
+          ) : (
+            <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/40" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[160px]">
+        {selected && (
+          <>
+            <DropdownMenuItem className="text-muted-foreground text-xs" onClick={() => onSelect("")}>
+              Clear sort
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {options.map((opt) => (
+          <DropdownMenuItem
+            key={opt.value}
+            onClick={() => onSelect(opt.value)}
+            className={selected === opt.value ? "font-medium bg-primary/5 text-primary" : ""}
+          >
+            {opt.label} first
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 function isTerminal(status: string) {
   return status === LeaveStatus.APPROVED || isRejected(status)
@@ -29,8 +85,8 @@ interface RequestRow {
   professor: {
     name: string | null
     email: string
-    campus: { name: string } | null
-    department: { name: string } | null
+    campus: { id: string; name: string } | null
+    department: { id: string; name: string } | null
   }
 }
 
@@ -42,6 +98,16 @@ interface Props {
 export function BulkSubmissionsTable({ requests, canBulkApprove }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
+  const [sortCampusId, setSortCampusId] = useState("")
+  const [sortDeptId, setSortDeptId] = useState("")
+
+  const campusOptions = Array.from(
+    new Map(requests.filter((r) => r.professor.campus).map((r) => [r.professor.campus!.id, r.professor.campus!.name])).entries()
+  ).map(([id, name]) => ({ value: id, label: name })).sort((a, b) => a.label.localeCompare(b.label))
+
+  const deptOptions = Array.from(
+    new Map(requests.filter((r) => r.professor.department).map((r) => [r.professor.department!.id, r.professor.department!.name])).entries()
+  ).map(([id, name]) => ({ value: id, label: name })).sort((a, b) => a.label.localeCompare(b.label))
 
   // Reset selection whenever the request list changes (filter/year changed)
   const requestKey = requests.map((r) => r.id).join(",")
@@ -49,7 +115,19 @@ export function BulkSubmissionsTable({ requests, canBulkApprove }: Props) {
     setSelected(new Set())
   }, [requestKey])
 
-  const selectableIds = requests.filter((r) => !isTerminal(r.status)).map((r) => r.id)
+  const sorted = (sortCampusId || sortDeptId)
+    ? [...requests].sort((a, b) => {
+        const aScore =
+          (sortCampusId && a.professor.campus?.id === sortCampusId ? 2 : 0) +
+          (sortDeptId   && a.professor.department?.id === sortDeptId ? 1 : 0)
+        const bScore =
+          (sortCampusId && b.professor.campus?.id === sortCampusId ? 2 : 0) +
+          (sortDeptId   && b.professor.department?.id === sortDeptId ? 1 : 0)
+        return bScore - aScore
+      })
+    : requests
+
+  const selectableIds = sorted.filter((r) => !isTerminal(r.status)).map((r) => r.id)
   const allChecked = selectableIds.length > 0 && selectableIds.every((id) => selected.has(id))
   const indeterminate = selected.size > 0 && !allChecked
 
@@ -99,8 +177,12 @@ export function BulkSubmissionsTable({ requests, canBulkApprove }: Props) {
               </TableHead>
             )}
             <TableHead>Professor</TableHead>
-            <TableHead>Campus</TableHead>
-            <TableHead>Department</TableHead>
+            <TableHead>
+              <SortHeader label="Campus" options={campusOptions} selected={sortCampusId} onSelect={setSortCampusId} />
+            </TableHead>
+            <TableHead>
+              <SortHeader label="Department" options={deptOptions} selected={sortDeptId} onSelect={setSortDeptId} />
+            </TableHead>
             <TableHead>Days</TableHead>
             <TableHead>Submitted</TableHead>
             <TableHead>Status</TableHead>
@@ -108,7 +190,7 @@ export function BulkSubmissionsTable({ requests, canBulkApprove }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {requests.map((req) => (
+          {sorted.map((req) => (
             <TableRow
               key={req.id}
               className={selected.has(req.id) ? "bg-primary/5" : undefined}

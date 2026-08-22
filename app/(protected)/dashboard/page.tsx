@@ -24,6 +24,8 @@ import {
   LayoutDashboard,
   Plus,
   Clock2,
+  CheckCircle2,
+  Leaf,
 } from "lucide-react"
 
 interface Props {
@@ -127,28 +129,43 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
       )}
 
-      <div className="rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 px-6 py-5">
+      <div>
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome back, {session.user.name?.split(" ")[0] ?? "Professor"}
         </h1>
-        <p className="text-muted-foreground mt-0.5">
-          Academic year {label} · {user?.campus?.name ?? "No campus"} · {user?.department?.name ?? "No department"}
+        <p className="text-muted-foreground mt-1 text-sm">
+          {label} · {user?.campus?.name ?? "No campus"} · {user?.department?.name ?? "No department"}
         </p>
       </div>
 
       {/* Days summary card */}
       <div className="grid grid-cols-3 gap-4">
-        <Card className="p-4 flex flex-col items-center text-center">
-          <p className="text-2xl font-bold">{maxLeaveDays}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Total days allowed</p>
+        <Card className="p-5 flex items-center gap-4">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 shrink-0">
+            <CalendarDays className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold leading-none text-blue-600">{maxLeaveDays}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total allowed</p>
+          </div>
         </Card>
-        <Card className="p-4 flex flex-col items-center text-center">
-          <p className={`text-2xl font-bold ${usedDays > 0 ? "text-amber-600" : "text-muted-foreground"}`}>{usedDays}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Days used</p>
+        <Card className="p-5 flex items-center gap-4">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-50 shrink-0">
+            <Leaf className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <p className={`text-2xl font-bold leading-none ${usedDays > 0 ? "text-amber-600" : "text-muted-foreground"}`}>{usedDays}</p>
+            <p className="text-xs text-muted-foreground mt-1">Days used</p>
+          </div>
         </Card>
-        <Card className="p-4 flex flex-col items-center text-center">
-          <p className={`text-2xl font-bold ${remainingDays === 0 ? "text-red-600" : "text-green-600"}`}>{remainingDays}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Days remaining</p>
+        <Card className="p-5 flex items-center gap-4">
+          <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${remainingDays === 0 ? "bg-red-50" : "bg-green-50"}`}>
+            <CheckCircle2 className={`w-5 h-5 ${remainingDays === 0 ? "text-red-600" : "text-green-600"}`} />
+          </div>
+          <div>
+            <p className={`text-2xl font-bold leading-none ${remainingDays === 0 ? "text-red-600" : "text-green-600"}`}>{remainingDays}</p>
+            <p className="text-xs text-muted-foreground mt-1">Remaining</p>
+          </div>
         </Card>
       </div>
 

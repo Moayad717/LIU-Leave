@@ -110,13 +110,27 @@ export async function reviewLeaveRequest(
       newStatus = action === "approve" ? LeaveStatus.APPROVED : LeaveStatus.REJECTED
     }
 
+    const now = new Date()
+    const trimmedComment = comment.trim() || null
+
     await db.leaveRequest.update({
       where: { id: requestId },
       data: {
         status: newStatus as never,
-        adminComment: comment.trim() || null,
-        reviewedAt: new Date(),
+        adminComment: trimmedComment,
+        reviewedAt: now,
         reviewedById: session!.user.id,
+        // Step-specific reviewer tracking
+        ...(role === Role.ASSISTANT_DEAN && {
+          step1ReviewedById: session!.user.id,
+          step1ReviewedAt: now,
+          step1Comment: trimmedComment,
+        }),
+        ...(role === Role.CHAIRMAN && {
+          step2ReviewedById: session!.user.id,
+          step2ReviewedAt: now,
+          step2Comment: trimmedComment,
+        }),
       },
     })
 

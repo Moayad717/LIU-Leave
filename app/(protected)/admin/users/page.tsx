@@ -3,8 +3,9 @@ import { redirect } from "next/navigation"
 import { db } from "@/lib/db"
 import { canAccessAdmin, canManageUsers, type Role } from "@/types/enums"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { UsersTable } from "@/components/users-table"
-import { Users } from "lucide-react"
+import { Users, Download } from "lucide-react"
 
 export default async function UsersPage() {
   const session = await auth()
@@ -21,9 +22,27 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-        <p className="text-muted-foreground">Manage roles and campus assignments.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground">Manage roles and campus assignments.</p>
+        </div>
+        {canManageUsers(session.user.role) && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href="/api/admin/professors-submissions-export" download>
+                <Download className="w-4 h-4" />
+                Export Professors + Submissions
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href="/api/admin/users-export" download>
+                <Download className="w-4 h-4" />
+                Export All Users
+              </a>
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card>

@@ -19,10 +19,12 @@ model User {
   campusId       String?
   departmentId   String?
   createdAt      DateTime       @default(now())
-  accounts       Account[]
-  leaveRequests  LeaveRequest[] @relation("ProfessorLeaves")
-  reviewedLeaves LeaveRequest[] @relation("ReviewedLeaves")
-  campus         Campus?        @relation(fields: [campusId], references: [id])
+  accounts        Account[]
+  leaveRequests   LeaveRequest[] @relation("ProfessorLeaves")
+  reviewedLeaves  LeaveRequest[] @relation("ReviewedLeaves")
+  step1Reviews    LeaveRequest[] @relation("Step1ReviewedLeaves")
+  step2Reviews    LeaveRequest[] @relation("Step2ReviewedLeaves")
+  campus          Campus?        @relation(fields: [campusId], references: [id])
   department     Department?    @relation(fields: [departmentId], references: [id])
 
   @@index([campusId])
@@ -79,16 +81,24 @@ model Holiday {
 }
 
 model LeaveRequest {
-  id           String      @id @default(cuid())
-  professorId  String
-  dates        DateTime[]
-  status       LeaveStatus @default(PENDING)
-  adminComment String?
-  submittedAt  DateTime    @default(now())
-  reviewedAt   DateTime?
-  reviewedById String?
-  professor    User        @relation("ProfessorLeaves", fields: [professorId], references: [id], onDelete: Cascade)
-  reviewedBy   User?       @relation("ReviewedLeaves", fields: [reviewedById], references: [id])
+  id               String      @id @default(cuid())
+  professorId      String
+  dates            DateTime[]
+  status           LeaveStatus @default(PENDING)
+  adminComment     String?
+  submittedAt      DateTime    @default(now())
+  reviewedAt       DateTime?
+  reviewedById     String?
+  step1ReviewedById String?
+  step1ReviewedAt  DateTime?
+  step1Comment     String?
+  step2ReviewedById String?
+  step2ReviewedAt  DateTime?
+  step2Comment     String?
+  professor        User        @relation("ProfessorLeaves", fields: [professorId], references: [id], onDelete: Cascade)
+  reviewedBy       User?       @relation("ReviewedLeaves", fields: [reviewedById], references: [id])
+  step1ReviewedBy  User?       @relation("Step1ReviewedLeaves", fields: [step1ReviewedById], references: [id])
+  step2ReviewedBy  User?       @relation("Step2ReviewedLeaves", fields: [step2ReviewedById], references: [id])
 
   @@index([professorId])
   @@index([status])

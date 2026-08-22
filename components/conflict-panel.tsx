@@ -1,7 +1,6 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, CheckCircle2, Users, Building } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Users, Building2, Info } from "lucide-react"
 import { format } from "date-fns"
 import { parseDate } from "@/lib/utils"
 
@@ -30,107 +29,141 @@ export function ConflictPanel({
   campusName,
   deptName,
 }: Props) {
-  const campusAlerts = conflicts.filter((c) => c.campusAlert)
-  const deptAlerts = conflicts.filter((c) => c.deptAlert)
-  const hasAnyAlert = campusAlerts.length > 0 || deptAlerts.length > 0
+  const campusAlertDates = conflicts.filter((c) => c.campusAlert)
+  const deptAlertDates   = conflicts.filter((c) => c.deptAlert && deptEnabled)
+  const totalAlerts      = campusAlertDates.length + deptAlertDates.length
+  const hasAnyAlert      = totalAlerts > 0
 
   return (
-    <div className="space-y-4">
-      {/* Summary banner */}
+    <div className="space-y-5">
+
+      {/* ── Summary banner ───────────────────────────────────────────── */}
       {hasAnyAlert ? (
-        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-          <div className="text-sm text-amber-900 space-y-0.5">
-            {campusAlerts.length > 0 && (
-              <p>
-                <span className="font-semibold">{campusAlerts.length} date{campusAlerts.length !== 1 ? "s" : ""}</span> would
-                trigger a campus-level overlap alert ({campusThreshold}+ professors absent on the same day).
-              </p>
-            )}
-            {deptAlerts.length > 0 && deptEnabled && (
-              <p>
-                <span className="font-semibold">{deptAlerts.length} date{deptAlerts.length !== 1 ? "s" : ""}</span> would
-                trigger a department-level overlap alert ({deptThreshold}+ from same dept absent).
-              </p>
-            )}
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 shrink-0 mt-0.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="font-semibold text-amber-900 text-sm">Overlap warnings detected</p>
+              <div className="space-y-1 text-sm text-amber-800">
+                {campusAlertDates.length > 0 && (
+                  <p>
+                    <span className="font-semibold">{campusAlertDates.length} date{campusAlertDates.length !== 1 ? "s" : ""}</span>
+                    {" "}will put {campusThreshold}+ professors absent on <span className="font-semibold">{campusName}</span> campus simultaneously.
+                  </p>
+                )}
+                {deptAlertDates.length > 0 && (
+                  <p>
+                    <span className="font-semibold">{deptAlertDates.length} date{deptAlertDates.length !== 1 ? "s" : ""}</span>
+                    {" "}will put {deptThreshold}+ professors absent from <span className="font-semibold">{deptName}</span> at the same time.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          No overlap conflicts detected. Approving this request will not trigger any alerts.
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-100 shrink-0">
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-green-900 text-sm">No conflicts</p>
+              <p className="text-xs text-green-700 mt-0.5">Approving this request won't cause any overlap alerts.</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Per-date breakdown */}
+      {/* ── Per-date breakdown ───────────────────────────────────────── */}
       <div className="space-y-2">
         {conflicts.map((c) => {
-          const hasCampus = c.campusAbsent.length > 0
-          const hasDept = c.deptAbsent.length > 0 && deptEnabled
-          const isClean = !c.campusAlert && !c.deptAlert
+          const hasCampus  = c.campusAbsent.length > 0
+          const hasDept    = c.deptAbsent.length > 0 && deptEnabled
+          const campusAlert = c.campusAlert
+          const deptAlert  = c.deptAlert && deptEnabled
+          const isClean    = !campusAlert && !deptAlert
+
+          // Severity determines left border color
+          const borderColor = campusAlert || deptAlert
+            ? "border-l-amber-400"
+            : "border-l-green-400"
+
+          // Total absent on campus = already out + this professor
+          const campusTotal = c.campusAbsent.length + 1
+          const deptTotal   = c.deptAbsent.length + 1
 
           return (
             <div
               key={c.date}
-              className={`rounded-md border px-4 py-3 text-sm ${
-                c.campusAlert || (c.deptAlert && deptEnabled)
-                  ? "border-amber-200 bg-amber-50/50"
-                  : "border-border bg-muted/20"
-              }`}
+              className={`rounded-lg border border-l-4 bg-card ${borderColor} overflow-hidden`}
             >
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="font-medium min-w-[9rem]">
+              {/* Date row */}
+              <div className="flex items-center justify-between gap-3 px-4 py-3 flex-wrap">
+                <p className="text-sm font-semibold tabular-nums">
                   {format(parseDate(c.date), "EEE, MMM d, yyyy")}
-                </span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {isClean && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-green-500" /> No conflicts
-                    </span>
-                  )}
-                  {c.campusAlert && (
-                    <Badge variant="destructive" className="gap-1 text-xs">
-                      <AlertTriangle className="w-3 h-3" />
-                      Campus overlap ({c.campusAbsent.length + 1}/{campusThreshold}+)
-                    </Badge>
-                  )}
-                  {c.deptAlert && deptEnabled && (
-                    <Badge className="gap-1 text-xs bg-amber-500 hover:bg-amber-500 text-white">
-                      <AlertTriangle className="w-3 h-3" />
-                      Dept overlap ({c.deptAbsent.length + 1}/{deptThreshold}+)
-                    </Badge>
-                  )}
-                </div>
+                </p>
+
+                {isClean ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-green-700 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Clear
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {campusAlert && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                        <Building2 className="w-3 h-3" />
+                        {campusTotal} absent on campus · limit {campusThreshold}
+                      </span>
+                    )}
+                    {deptAlert && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800">
+                        <Users className="w-3 h-3" />
+                        {deptTotal} absent from dept · limit {deptThreshold}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
+              {/* "Also absent" details */}
               {(hasCampus || hasDept) && (
-                <div className="mt-2 space-y-1.5">
+                <div className="border-t bg-muted/30 px-4 py-3 space-y-3">
                   {hasCampus && (
-                    <div className="flex items-start gap-2">
-                      <Building className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="flex flex-wrap gap-1 items-center">
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          Also absent on {campusName}:
-                        </span>
+                    <div>
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                        <Building2 className="w-3 h-3" />
+                        Also absent on {campusName} campus
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
                         {c.campusAbsent.map((name) => (
-                          <Badge key={name} variant="secondary" className="text-xs font-normal">
+                          <span
+                            key={name}
+                            className="rounded-md border bg-background px-2 py-0.5 text-xs font-medium text-foreground"
+                          >
                             {name}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </div>
                   )}
                   {hasDept && (
-                    <div className="flex items-start gap-2">
-                      <Users className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="flex flex-wrap gap-1 items-center">
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          Also absent from {deptName}:
-                        </span>
+                    <div>
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                        <Users className="w-3 h-3" />
+                        Also absent from {deptName}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
                         {c.deptAbsent.map((name) => (
-                          <Badge key={name} className="text-xs font-normal bg-amber-100 text-amber-800 hover:bg-amber-100">
+                          <span
+                            key={name}
+                            className="rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-900"
+                          >
                             {name}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -140,6 +173,15 @@ export function ConflictPanel({
             </div>
           )
         })}
+      </div>
+
+      {/* ── Legend ───────────────────────────────────────────────────── */}
+      <div className="flex items-start gap-2 rounded-lg bg-muted/40 px-3 py-2.5">
+        <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Counts include this professor. Campus limit is {campusThreshold}+ absences; department limit is {deptThreshold}+.
+          These are warnings only — approving is still possible.
+        </p>
       </div>
     </div>
   )
