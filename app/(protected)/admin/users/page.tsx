@@ -28,12 +28,20 @@ export default async function UsersPage() {
           <p className="text-muted-foreground">Manage roles and campus assignments.</p>
         </div>
         {canManageUsers(session.user.role) && (
-          <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <a href="/api/admin/users-export" download>
-              <Download className="w-4 h-4" />
-              Export Users
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href="/api/admin/professors-submissions-export" download>
+                <Download className="w-4 h-4" />
+                Export Professors + Submissions
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href="/api/admin/users-export" download>
+                <Download className="w-4 h-4" />
+                Export All Users
+              </a>
+            </Button>
+          </div>
         )}
       </div>
 

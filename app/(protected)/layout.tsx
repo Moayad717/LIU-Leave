@@ -14,8 +14,16 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
       {canAccessAdmin(session.user.role) && <DailyBriefPopup />}
       <footer className="border-t bg-white mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Lebanese International University — School of Engineering
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} Lebanese International University — School of Engineering</span>
+          <a
+            href="https://liubeehive.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-foreground hover:text-primary transition-colors"
+          >
+            BEEhivelab
+          </a>
         </div>
       </footer>
     </div>

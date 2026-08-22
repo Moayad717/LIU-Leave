@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import {
   GraduationCap, LayoutDashboard, ClipboardList, BarChart3,
-  Users, Settings, LogOut, ChevronDown, UserCircle, BookOpen,
+  Users, Settings, LogOut, ChevronDown, UserCircle, BookOpen, CalendarCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -34,20 +34,22 @@ const professorLinks = [
 ]
 
 const limitedAdminLinks = [
-  { href: "/dashboard",        label: "Dashboard",   icon: LayoutDashboard },
-  { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
-  { href: "/admin/stats",       label: "Statistics",  icon: BarChart3 },
-  { href: "/admin/users",       label: "Users",       icon: Users },
-  { href: "/tutorial",          label: "Guide",       icon: BookOpen },
+  { href: "/dashboard",             label: "Dashboard",   icon: LayoutDashboard },
+  { href: "/admin/submissions",     label: "Submissions", icon: ClipboardList },
+  { href: "/admin/stats",           label: "Statistics",  icon: BarChart3 },
+  { href: "/admin/daily-summary",   label: "Daily",       icon: CalendarCheck },
+  { href: "/admin/users",           label: "Users",       icon: Users },
+  { href: "/tutorial",              label: "Guide",       icon: BookOpen },
 ]
 
 const fullAdminLinks = [
-  { href: "/dashboard",        label: "Dashboard",   icon: LayoutDashboard },
-  { href: "/admin/submissions", label: "Submissions", icon: ClipboardList },
-  { href: "/admin/stats",       label: "Statistics",  icon: BarChart3 },
-  { href: "/admin/users",       label: "Users",       icon: Users },
-  { href: "/admin/settings",    label: "Settings",    icon: Settings },
-  { href: "/tutorial",          label: "Guide",       icon: BookOpen },
+  { href: "/dashboard",             label: "Dashboard",   icon: LayoutDashboard },
+  { href: "/admin/submissions",     label: "Submissions", icon: ClipboardList },
+  { href: "/admin/stats",           label: "Statistics",  icon: BarChart3 },
+  { href: "/admin/daily-summary",   label: "Daily",       icon: CalendarCheck },
+  { href: "/admin/users",           label: "Users",       icon: Users },
+  { href: "/admin/settings",        label: "Settings",    icon: Settings },
+  { href: "/tutorial",              label: "Guide",       icon: BookOpen },
 ]
 
 function getLinks(role: Role) {
