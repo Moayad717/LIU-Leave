@@ -28,6 +28,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         select: { blocked: true },
       })
       if (dbUser?.blocked) return "/auth/error?error=AccountBlocked"
+      if (!user.email?.endsWith("@liu.edu.lb")) return "/auth/error?error=DomainRestricted"
       return true
     },
 
