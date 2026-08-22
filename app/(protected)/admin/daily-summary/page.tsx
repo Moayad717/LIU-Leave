@@ -29,7 +29,6 @@ export default async function DailySummaryPage({ searchParams }: Props) {
 
   // Build Prisma where clause for professors
   const professorWhere: Prisma.UserWhereInput = {
-    role: "PROFESSOR",
     ...(isCampusAdmin ? { campusId: session.user.campusId } : {}),
     ...(isDeptAdmin ? { departmentId: session.user.departmentId } : {}),
     ...(isFullAdmin && filterCampusId ? { campusId: filterCampusId } : {}),
@@ -183,7 +182,7 @@ export default async function DailySummaryPage({ searchParams }: Props) {
               </div>
               <div>
                 <p className="text-2xl font-bold leading-none">{professors.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">Total Professors</p>
+                <p className="text-xs text-muted-foreground mt-1">Total Faculty</p>
               </div>
             </Card>
             <Card className="p-5 flex items-center gap-4">
@@ -209,7 +208,7 @@ export default async function DailySummaryPage({ searchParams }: Props) {
           </div>
 
           {professors.length === 0 ? (
-            <Card className="p-8 text-center text-muted-foreground">No professors found for the selected filters.</Card>
+            <Card className="p-8 text-center text-muted-foreground">No faculty found for the selected filters.</Card>
           ) : (
             <div className="space-y-6">
               {campuses.map((campus) => {

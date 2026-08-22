@@ -42,9 +42,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
   const displayDay   = pinnedDay ?? hoveredDay
   const displayProfs = displayDay ? (details[displayDay] ?? []) : []
 
-  const displayIsWeekend = displayDay
-    ? isWeekend(parseDate(displayDay))
-    : false
+  const displayIsWeekend = displayDay ? isWeekend(parseDate(displayDay)) : false
 
   const campusGroups = useMemo(() => {
     const map: Record<string, string[]> = {}
@@ -64,7 +62,6 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
     )
   }, [startDate, endDate])
 
-  // Month label per week column: show when month changes
   const weekMonths = useMemo(() => {
     const labels: (string | null)[] = []
     let lastMonth = -1
@@ -84,33 +81,31 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
     <div className="flex gap-6">
       {/* ── Grid ─────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto shrink-0">
-        {/* Month labels row */}
-        <div className="flex ml-10 mb-1 h-4">
-          {weeks.map((_, colIdx) => (
-            <div key={colIdx} className="w-9 shrink-0 relative overflow-visible">
-              {weekMonths[colIdx] && (
-                <span className="absolute left-0 text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
-                  {weekMonths[colIdx]}
-                </span>
-              )}
+        {/* Day column headers */}
+        <div className="flex mb-2 ml-12">
+          {DAY_LABELS.map((d) => (
+            <div
+              key={d}
+              className={`w-12 text-center text-[11px] font-medium ${
+                d === "Sun" || d === "Sat" ? "text-muted-foreground/60" : "text-muted-foreground"
+              }`}
+            >
+              {d}
             </div>
           ))}
         </div>
 
-        {/* Rows = day of week, columns = weeks */}
+        {/* Week rows */}
         <div onMouseLeave={() => setHoveredDay(null)}>
-          {DAY_LABELS.map((dayLabel, dayOfWeek) => (
-            <div key={dayOfWeek} className="flex items-center gap-0 mb-0.5">
-              {/* Day label */}
-              <div className={`w-10 shrink-0 text-[11px] font-semibold text-right pr-2 select-none ${
-                dayOfWeek === 0 || dayOfWeek === 6 ? "text-muted-foreground/60" : "text-muted-foreground"
-              }`}>
-                {dayLabel}
+          {weeks.map((week, rowIdx) => (
+            <div key={rowIdx} className="flex items-center gap-0 mb-0.5">
+              {/* Month label */}
+              <div className="w-12 shrink-0 text-[11px] font-semibold text-muted-foreground text-right pr-2 select-none">
+                {weekMonths[rowIdx] ?? ""}
               </div>
 
-              {/* Cells: one per week for this day-of-week */}
-              {weeks.map((week, colIdx) => {
-                const day        = week[dayOfWeek]
+              {/* Day cells */}
+              {week.map((day) => {
                 const key        = format(day, "yyyy-MM-dd")
                 const isInRange  = day >= startDate && day <= endDate
                 const count      = isInRange ? (data[key] ?? 0) : 0
@@ -125,7 +120,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                     onClick={() => { if (!isInRange) return; setPinnedDay(pinnedDay === key ? null : key) }}
                     title={isInRange ? format(day, "MMM d") : undefined}
                     className={[
-                      "w-9 h-9 rounded-lg flex items-center justify-center transition-all select-none",
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all select-none",
                       isInRange ? "cursor-pointer" : "opacity-0 pointer-events-none",
                       isInRange ? cellColor(count) : "",
                       isPinned    ? "ring-2 ring-gray-800 ring-offset-1" : "",
@@ -134,7 +129,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                     ].join(" ")}
                   >
                     {isInRange && (
-                      <span className={`text-[11px] font-semibold leading-none ${textColor(count)}`}>
+                      <span className={`text-xs font-semibold leading-none ${textColor(count)}`}>
                         {day.getDate()}
                       </span>
                     )}
@@ -146,7 +141,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-1.5 mt-3 ml-10">
+        <div className="flex items-center gap-1.5 mt-3 ml-12">
           <span className="text-xs text-muted-foreground">None</span>
           {[0, 1, 2, 3, 4].map((v) => (
             <div key={v} className={`w-4 h-4 rounded-sm ${cellColor(v)}`} />
@@ -154,7 +149,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
           <span className="text-xs text-muted-foreground">Many</span>
           {maxCount > 0 && (
             <span className="text-xs text-muted-foreground ml-2">
-              Peak: {maxCount} professor{maxCount !== 1 ? "s" : ""}
+              Peak: {maxCount} on leave
             </span>
           )}
           <span className="text-xs text-muted-foreground ml-3 hidden sm:inline">
@@ -180,7 +175,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                     ? "Weekend"
                     : displayProfs.length === 0
                     ? "No approved leave on this day"
-                    : `${displayProfs.length} professor${displayProfs.length !== 1 ? "s" : ""} on approved leave`}
+                    : `${displayProfs.length} person${displayProfs.length !== 1 ? "s" : ""} on approved leave`}
                 </p>
               </div>
               {pinnedDay && (
@@ -213,7 +208,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">All professors available.</p>
+              <p className="text-sm text-muted-foreground">All faculty available.</p>
             )}
           </>
         ) : (
