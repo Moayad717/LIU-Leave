@@ -85,8 +85,8 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
           {DAY_LABELS.map((d) => (
             <div
               key={d}
-              className={`w-7 text-center text-[11px] font-medium ${
-                d === "Sun" || d === "Sat" ? "text-muted-foreground/50" : "text-muted-foreground"
+              className={`w-9 text-center text-[11px] font-medium ${
+                d === "Sun" || d === "Sat" ? "text-muted-foreground/60" : "text-muted-foreground"
               }`}
             >
               {d}
@@ -120,17 +120,16 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                     onClick={() => { if (!isInRange) return; setPinnedDay(pinnedDay === key ? null : key) }}
                     title={isInRange ? format(day, "MMM d") : undefined}
                     className={[
-                      "w-7 h-7 mr-0 rounded-md flex items-center justify-center transition-all select-none",
+                      "w-9 h-9 rounded-lg flex items-center justify-center transition-all select-none",
                       isInRange ? "cursor-pointer" : "opacity-0 pointer-events-none",
                       isInRange ? cellColor(count) : "",
-                      weekend && isInRange ? "opacity-50" : "",
                       isPinned    ? "ring-2 ring-gray-800 ring-offset-1" : "",
                       isHovered && !isPinned ? "ring-2 ring-blue-400 ring-offset-1" : "",
                       isToday && isInRange  ? "outline outline-2 outline-offset-1 outline-primary" : "",
                     ].join(" ")}
                   >
                     {isInRange && (
-                      <span className={`text-[10px] font-semibold leading-none ${textColor(count)} ${isToday ? "font-bold" : ""}`}>
+                      <span className={`text-[11px] font-semibold leading-none ${textColor(count)}`}>
                         {day.getDate()}
                       </span>
                     )}

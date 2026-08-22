@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { Nav } from "@/components/nav"
 import { DailyBriefPopup } from "@/components/daily-brief-popup"
 import { canAccessAdmin } from "@/types/enums"
+import { ExternalLink } from "lucide-react"
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -20,9 +21,10 @@ export default async function ProtectedLayout({ children }: { children: React.Re
             href="https://liubeehive.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-foreground hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2 hover:opacity-80 transition-opacity"
           >
             BEEhivelab
+            <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       </footer>
