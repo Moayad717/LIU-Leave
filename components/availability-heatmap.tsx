@@ -60,9 +60,7 @@ export function AvailabilityHeatmap({
 
   const displayDay = pinnedDay ?? hoveredDay
 
-  const displayIsWeekend = displayDay
-    ? isWeekend(parseDate(displayDay))
-    : false
+  const displayIsWeekend = displayDay ? isWeekend(parseDate(displayDay)) : false
 
   const onLeaveSet = useMemo(
     () => new Set(displayDay ? (onLeaveIds[displayDay] ?? []) : []),
@@ -97,33 +95,31 @@ export function AvailabilityHeatmap({
     <div className="flex gap-6">
       {/* ── Grid ─────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto shrink-0">
-        {/* Month labels row */}
-        <div className="flex ml-10 mb-1 h-4">
-          {weeks.map((_, colIdx) => (
-            <div key={colIdx} className="w-9 shrink-0 relative overflow-visible">
-              {weekMonths[colIdx] && (
-                <span className="absolute left-0 text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
-                  {weekMonths[colIdx]}
-                </span>
-              )}
+        {/* Day column headers */}
+        <div className="flex mb-2 ml-12">
+          {DAY_LABELS.map((d) => (
+            <div
+              key={d}
+              className={`w-12 text-center text-[11px] font-medium ${
+                d === "Sun" || d === "Sat" ? "text-muted-foreground/60" : "text-muted-foreground"
+              }`}
+            >
+              {d}
             </div>
           ))}
         </div>
 
-        {/* Rows = day of week, columns = weeks */}
+        {/* Week rows */}
         <div onMouseLeave={() => setHoveredDay(null)}>
-          {DAY_LABELS.map((dayLabel, dayOfWeek) => (
-            <div key={dayOfWeek} className="flex items-center gap-0 mb-0.5">
-              {/* Day label */}
-              <div className={`w-10 shrink-0 text-[11px] font-semibold text-right pr-2 select-none ${
-                dayOfWeek === 0 || dayOfWeek === 6 ? "text-muted-foreground/60" : "text-muted-foreground"
-              }`}>
-                {dayLabel}
+          {weeks.map((week, rowIdx) => (
+            <div key={rowIdx} className="flex items-center gap-0 mb-0.5">
+              {/* Month label */}
+              <div className="w-12 shrink-0 text-[11px] font-semibold text-muted-foreground text-right pr-2 select-none">
+                {weekMonths[rowIdx] ?? ""}
               </div>
 
-              {/* Cells: one per week for this day-of-week */}
-              {weeks.map((week, colIdx) => {
-                const day       = week[dayOfWeek]
+              {/* Day cells */}
+              {week.map((day) => {
                 const key       = format(day, "yyyy-MM-dd")
                 const isInRange = day >= startDate && day <= endDate
                 const avail     = isInRange ? (availData[key] ?? totalProfessors) : 0
@@ -138,7 +134,7 @@ export function AvailabilityHeatmap({
                     onClick={() => { if (!isInRange) return; setPinnedDay(pinnedDay === key ? null : key) }}
                     title={isInRange ? format(day, "MMM d") : undefined}
                     className={[
-                      "w-9 h-9 rounded-lg flex items-center justify-center transition-all select-none",
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all select-none",
                       isInRange ? "cursor-pointer" : "opacity-0 pointer-events-none",
                       isInRange ? cellColor(avail, totalProfessors) : "",
                       isPinned ? "ring-2 ring-gray-800 ring-offset-1" : "",
@@ -147,7 +143,7 @@ export function AvailabilityHeatmap({
                     ].join(" ")}
                   >
                     {isInRange && (
-                      <span className={`text-[11px] font-semibold leading-none ${textColor(avail, totalProfessors)}`}>
+                      <span className={`text-xs font-semibold leading-none ${textColor(avail, totalProfessors)}`}>
                         {day.getDate()}
                       </span>
                     )}
@@ -159,14 +155,14 @@ export function AvailabilityHeatmap({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-1.5 mt-3 ml-10 flex-wrap">
+        <div className="flex items-center gap-1.5 mt-3 ml-12 flex-wrap">
           <span className="text-xs text-muted-foreground">Low</span>
           {["bg-red-700","bg-red-400","bg-orange-400","bg-yellow-300","bg-emerald-400","bg-emerald-600"].map((cls) => (
             <div key={cls} className={`w-4 h-4 rounded-sm ${cls}`} />
           ))}
           <span className="text-xs text-muted-foreground">Full</span>
           <span className="text-xs text-muted-foreground ml-2">
-            {totalProfessors} professor{totalProfessors !== 1 ? "s" : ""} in scope
+            {totalProfessors} faculty in scope
           </span>
           <span className="text-xs text-muted-foreground ml-3 hidden sm:inline">
             Hover to preview · Click to pin
@@ -205,7 +201,7 @@ export function AvailabilityHeatmap({
             {displayIsWeekend ? (
               <p className="text-sm text-muted-foreground">No classes scheduled on weekends.</p>
             ) : allPresent ? (
-              <p className="text-sm font-medium text-emerald-700">All professors available — full attendance.</p>
+              <p className="text-sm font-medium text-emerald-700">Full attendance — everyone available.</p>
             ) : (
               <div className="space-y-2">
                 {availByCampus.map(([campus, names]) => (

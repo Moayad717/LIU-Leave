@@ -49,7 +49,7 @@ export default async function StatsPage({ searchParams }: Props) {
       orderBy: { submittedAt: "desc" },
     }),
     db.user.findMany({
-      where: { role: "PROFESSOR", ...scopeFilter },
+      where: { ...scopeFilter },
       select: { id: true, name: true, email: true, campus: { select: { name: true } } },
     }),
     db.appSettings.findUnique({ where: { id: "global" } }),
@@ -268,7 +268,7 @@ export default async function StatsPage({ searchParams }: Props) {
           </div>
           <div>
             <p className="text-2xl font-bold leading-none text-green-600">{totalApprovedProfessors}</p>
-            <p className="text-xs text-muted-foreground mt-1">Professors</p>
+            <p className="text-xs text-muted-foreground mt-1">Faculty with Leave</p>
           </div>
         </Card>
         <Card className="p-5 flex items-center gap-4 col-span-2 sm:col-span-1">
@@ -300,7 +300,7 @@ export default async function StatsPage({ searchParams }: Props) {
           </TabsTrigger>
           <TabsTrigger value="professors" className="gap-1.5">
             <User className="w-3.5 h-3.5" />
-            By Professor
+            By Person
           </TabsTrigger>
         </TabsList>
 
@@ -354,7 +354,7 @@ export default async function StatsPage({ searchParams }: Props) {
         <TabsContent value="professors">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">By Professor</CardTitle>
+              <CardTitle className="text-base">By Person</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {approvedRequests.length === 0 ? (
