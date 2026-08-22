@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { toggleSubmissions, addHoliday, removeHoliday, updateSettings, resetDatabase, bulkAddHolidays } from "@/actions/settings"
+import { toggleSubmissions, addHoliday, removeHoliday, updateSettings, resetDatabase, bulkAddHolidays, clearAllHolidays } from "@/actions/settings"
 import { toast } from "sonner"
 import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal, AlertTriangle, Upload } from "lucide-react"
 import {
@@ -341,11 +341,47 @@ export function SettingsPanel({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <CalendarOff className="w-4 h-4 text-amber-500" />
-            Holidays
-          </CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarOff className="w-4 h-4 text-amber-500" />
+              Holidays
+            </CardTitle>
+            {holidays.length > 0 && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" disabled={isPending}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Clear All
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Clear all holidays?</DialogTitle>
+                    <DialogDescription>
+                      This will permanently delete all {holidays.length} holiday{holidays.length !== 1 ? "s" : ""}. This cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={() => {
+                        startTransition(async () => {
+                          const result = await clearAllHolidays()
+                          if (result && "error" in result) { toast.error(result.error); return }
+                          setHolidays([])
+                          toast.success("All holidays cleared.")
+                        })
+                      }}
+                    >
+                      Yes, clear all
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="flex flex-wrap gap-3 items-end rounded-lg border bg-muted/30 p-4">

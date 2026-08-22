@@ -109,6 +109,19 @@ export async function bulkAddHolidays(entries: { date: string; label: string }[]
   }
 }
 
+export async function clearAllHolidays() {
+  await requireAdmin()
+
+  try {
+    await db.holiday.deleteMany()
+    revalidatePath("/admin/settings")
+    revalidatePath("/dashboard")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
 export async function resetDatabase() {
   await requireAdmin()
 
