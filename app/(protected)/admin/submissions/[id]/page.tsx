@@ -180,9 +180,9 @@ export default async function SubmissionDetailPage({ params }: Props) {
                 at: req.step2ReviewedAt,
                 comment: req.step2Comment,
               },
-              // Final step: only show if it's a bypass (no step1) OR after step2
-              req.reviewedAt && (!req.step1ReviewedAt || req.step2ReviewedAt || canBypassApproval(role)) && {
-                label: req.step1ReviewedAt ? "Step 3 — Dean" : "Reviewed",
+              // Show final step whenever it happened (bypass or normal step 3)
+              req.reviewedAt && {
+                label: req.step1ReviewedAt && req.step2ReviewedAt ? "Step 3 — Dean" : "Reviewed (bypassed)",
                 reviewer: req.reviewedBy?.name ?? req.reviewedBy?.email ?? "unknown",
                 at: req.reviewedAt,
                 comment: req.adminComment,
