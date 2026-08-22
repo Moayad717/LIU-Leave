@@ -12,7 +12,6 @@ export async function GET() {
   }
 
   const professors = await db.user.findMany({
-    where: { role: "PROFESSOR" },
     include: {
       campus: true,
       department: true,

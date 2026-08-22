@@ -42,6 +42,10 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
   const displayDay   = pinnedDay ?? hoveredDay
   const displayProfs = displayDay ? (details[displayDay] ?? []) : []
 
+  const displayIsWeekend = displayDay
+    ? isWeekend(parseDate(displayDay))
+    : false
+
   const campusGroups = useMemo(() => {
     const map: Record<string, string[]> = {}
     for (const p of displayProfs) {
@@ -60,7 +64,7 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
     )
   }, [startDate, endDate])
 
-  // Month label per row: show month name only when it changes
+  // Month label per week column: show when month changes
   const weekMonths = useMemo(() => {
     const labels: (string | null)[] = []
     let lastMonth = -1
@@ -80,38 +84,39 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
     <div className="flex gap-6">
       {/* ── Grid ─────────────────────────────────────────────────────── */}
       <div className="overflow-x-auto shrink-0">
-        {/* Day column headers */}
-        <div className="flex mb-2 ml-10">
-          {DAY_LABELS.map((d) => (
-            <div
-              key={d}
-              className={`w-9 text-center text-[11px] font-medium ${
-                d === "Sun" || d === "Sat" ? "text-muted-foreground/60" : "text-muted-foreground"
-              }`}
-            >
-              {d}
+        {/* Month labels row */}
+        <div className="flex ml-10 mb-1 h-4">
+          {weeks.map((_, colIdx) => (
+            <div key={colIdx} className="w-9 shrink-0 relative overflow-visible">
+              {weekMonths[colIdx] && (
+                <span className="absolute left-0 text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
+                  {weekMonths[colIdx]}
+                </span>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Week rows */}
+        {/* Rows = day of week, columns = weeks */}
         <div onMouseLeave={() => setHoveredDay(null)}>
-          {weeks.map((week, rowIdx) => (
-            <div key={rowIdx} className="flex items-center gap-0 mb-0.5">
-              {/* Month label */}
-              <div className="w-10 shrink-0 text-[11px] font-semibold text-muted-foreground text-right pr-2 select-none">
-                {weekMonths[rowIdx] ?? ""}
+          {DAY_LABELS.map((dayLabel, dayOfWeek) => (
+            <div key={dayOfWeek} className="flex items-center gap-0 mb-0.5">
+              {/* Day label */}
+              <div className={`w-10 shrink-0 text-[11px] font-semibold text-right pr-2 select-none ${
+                dayOfWeek === 0 || dayOfWeek === 6 ? "text-muted-foreground/60" : "text-muted-foreground"
+              }`}>
+                {dayLabel}
               </div>
 
-              {/* Day cells */}
-              {week.map((day) => {
+              {/* Cells: one per week for this day-of-week */}
+              {weeks.map((week, colIdx) => {
+                const day        = week[dayOfWeek]
                 const key        = format(day, "yyyy-MM-dd")
                 const isInRange  = day >= startDate && day <= endDate
                 const count      = isInRange ? (data[key] ?? 0) : 0
                 const isToday    = key === TODAY
                 const isPinned   = pinnedDay === key
                 const isHovered  = displayDay === key
-                const weekend    = isWeekend(day)
 
                 return (
                   <div
@@ -171,7 +176,9 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {displayProfs.length === 0
+                  {displayIsWeekend
+                    ? "Weekend"
+                    : displayProfs.length === 0
                     ? "No approved leave on this day"
                     : `${displayProfs.length} professor${displayProfs.length !== 1 ? "s" : ""} on approved leave`}
                 </p>
@@ -186,7 +193,9 @@ export function CalendarHeatmap({ data, details, startDate, endDate }: Props) {
               )}
             </div>
 
-            {displayProfs.length > 0 ? (
+            {displayIsWeekend ? (
+              <p className="text-sm text-muted-foreground">No classes scheduled on weekends.</p>
+            ) : displayProfs.length > 0 ? (
               <div className="space-y-3">
                 {campusGroups.map(([campus, names]) => (
                   <div key={campus}>
