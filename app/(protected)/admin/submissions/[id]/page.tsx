@@ -173,7 +173,12 @@ export default async function SubmissionDetailPage({ params }: Props) {
             const step1Name = req.step1ReviewedBy?.name ?? req.step1ReviewedBy?.email
             const step2Name = req.step2ReviewedBy?.name ?? req.step2ReviewedBy?.email
             const finalName = req.reviewedBy?.name ?? req.reviewedBy?.email
-            const finalIsDuplicate = finalName && (finalName === step1Name || finalName === step2Name)
+            // reviewedBy is written by every action as a side-effect. It's a duplicate
+            // only when its timestamp exactly matches a step timestamp (same DB update).
+            const finalIsDuplicate = req.reviewedBy && (
+              (req.step1ReviewedAt && req.reviewedAt?.getTime() === req.step1ReviewedAt.getTime()) ||
+              (req.step2ReviewedAt && req.reviewedAt?.getTime() === req.step2ReviewedAt.getTime())
+            )
 
             const steps = [
               req.step1ReviewedBy && {
