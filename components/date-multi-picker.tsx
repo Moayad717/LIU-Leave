@@ -22,6 +22,7 @@ interface Props {
   academicYearEnd: Date
   holidays?: Holiday[]
   blockedDates?: Date[]
+  extraBlockedLabels?: string[]
   approvedDates?: Date[]
   pendingDates?: Date[]
   rejectedDates?: Date[]
@@ -36,6 +37,7 @@ export function DateMultiPicker({
   academicYearEnd,
   holidays = [],
   blockedDates = [],
+  extraBlockedLabels = [],
   approvedDates = [],
   pendingDates = [],
   rejectedDates = [],
@@ -364,6 +366,12 @@ export function DateMultiPicker({
             <span className="text-gray-500">Sep 16–30: Academic year closing period</span>
           </div>
         )}
+        {extraBlockedLabels.map((label) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded-sm bg-gray-300 opacity-70" />
+            <span className="text-gray-500">{label}</span>
+          </div>
+        ))}
       </div>
 
       <Button

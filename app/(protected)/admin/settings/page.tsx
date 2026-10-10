@@ -9,9 +9,17 @@ export default async function SettingsPage() {
   const session = await auth()
   if (!session || !canManageUsers(session.user.role)) redirect("/admin")
 
-  const [settings, holidays] = await Promise.all([
+  const [settings, holidays, blockedPeriods, professors] = await Promise.all([
     db.appSettings.findUnique({ where: { id: "global" } }),
     db.holiday.findMany({ orderBy: { date: "asc" } }),
+    db.blockedPeriod.findMany({
+      orderBy: { startDate: "asc" },
+      include: { exemptUsers: { select: { id: true, name: true, email: true } } },
+    }),
+    db.user.findMany({
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: "asc" },
+    }),
   ])
 
   return (
@@ -32,6 +40,8 @@ export default async function SettingsPage() {
         campusOverlapThreshold={settings?.campusOverlapThreshold ?? 3}
         deptOverlapEnabled={settings?.deptOverlapEnabled ?? true}
         deptOverlapThreshold={settings?.deptOverlapThreshold ?? 2}
+        blockedPeriods={blockedPeriods}
+        professors={professors}
       />
     </div>
   )

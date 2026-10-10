@@ -26,6 +26,7 @@ model User {
   step2Reviews    LeaveRequest[] @relation("Step2ReviewedLeaves")
   campus          Campus?        @relation(fields: [campusId], references: [id])
   department     Department?    @relation(fields: [departmentId], references: [id])
+  exemptFromBlockedPeriods BlockedPeriod[] @relation("BlockedPeriodExemptions")
 
   @@index([campusId])
   @@index([departmentId])
@@ -78,6 +79,18 @@ model Holiday {
   createdAt DateTime @default(now())
 
   @@index([date])
+}
+
+model BlockedPeriod {
+  id          String   @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  label       String?
+  exemptRoles Role[]
+  exemptUsers User[]   @relation("BlockedPeriodExemptions")
+  createdAt   DateTime @default(now())
+
+  @@index([startDate, endDate])
 }
 
 model LeaveRequest {

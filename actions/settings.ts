@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { canManageUsers } from "@/types/enums"
+import { canManageUsers, Role } from "@/types/enums"
 import { revalidatePath } from "next/cache"
 
 // Auth guard outside try/catch
@@ -114,6 +114,59 @@ export async function clearAllHolidays() {
 
   try {
     await db.holiday.deleteMany()
+    revalidatePath("/admin/settings")
+    revalidatePath("/dashboard")
+    return { success: true }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
+export async function createBlockedPeriod(data: {
+  startDateISO: string
+  endDateISO: string
+  label: string
+  exemptRoles: string[]
+  exemptUserIds: string[]
+}) {
+  await requireAdmin()
+
+  const startDate = new Date(data.startDateISO)
+  const endDate = new Date(data.endDateISO)
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return { error: "Invalid date." }
+  }
+  if (endDate < startDate) {
+    return { error: "End date must be on or after the start date." }
+  }
+
+  const validRoles = Object.values(Role)
+  const exemptRoles = data.exemptRoles.filter((r) => validRoles.includes(r as typeof validRoles[number]))
+
+  try {
+    const period = await db.blockedPeriod.create({
+      data: {
+        startDate,
+        endDate,
+        label: data.label.trim() || null,
+        exemptRoles: exemptRoles as never[],
+        exemptUsers: { connect: data.exemptUserIds.map((id) => ({ id })) },
+      },
+      include: { exemptUsers: { select: { id: true, name: true, email: true } } },
+    })
+    revalidatePath("/admin/settings")
+    revalidatePath("/dashboard")
+    return { success: true, period }
+  } catch {
+    return { error: "Something went wrong. Please try again." }
+  }
+}
+
+export async function deleteBlockedPeriod(id: string) {
+  await requireAdmin()
+
+  try {
+    await db.blockedPeriod.delete({ where: { id } })
     revalidatePath("/admin/settings")
     revalidatePath("/dashboard")
     return { success: true }

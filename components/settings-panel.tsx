@@ -9,9 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { toggleSubmissions, addHoliday, removeHoliday, updateSettings, resetDatabase, bulkAddHolidays, clearAllHolidays } from "@/actions/settings"
+import {
+  toggleSubmissions,
+  addHoliday,
+  removeHoliday,
+  updateSettings,
+  resetDatabase,
+  bulkAddHolidays,
+  clearAllHolidays,
+  createBlockedPeriod,
+  deleteBlockedPeriod,
+} from "@/actions/settings"
 import { toast } from "sonner"
-import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal, AlertTriangle, Upload } from "lucide-react"
+import { CalendarOff, Lock, Unlock, Trash2, Plus, SlidersHorizontal, AlertTriangle, Upload, CalendarX2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -21,6 +31,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { ProfessorMultiSelect, type ProfessorOption } from "@/components/professor-multi-select"
+import { Role, getRoleLabel } from "@/types/enums"
 
 interface ParsedEntry {
   dateStr: string
@@ -111,6 +123,15 @@ interface Holiday {
   label: string | null
 }
 
+interface BlockedPeriod {
+  id: string
+  startDate: Date
+  endDate: Date
+  label: string | null
+  exemptRoles: string[]
+  exemptUsers: { id: string; name: string | null; email: string }[]
+}
+
 interface Props {
   submissionsOpen: boolean
   holidays: Holiday[]
@@ -118,6 +139,8 @@ interface Props {
   campusOverlapThreshold: number
   deptOverlapEnabled: boolean
   deptOverlapThreshold: number
+  blockedPeriods: BlockedPeriod[]
+  professors: ProfessorOption[]
 }
 
 export function SettingsPanel({
@@ -127,6 +150,8 @@ export function SettingsPanel({
   campusOverlapThreshold: initialCampusThreshold,
   deptOverlapEnabled: initialDeptEnabled,
   deptOverlapThreshold: initialDeptThreshold,
+  blockedPeriods: initialBlockedPeriods,
+  professors,
 }: Props) {
   const [open, setOpen] = useState(initialOpen)
   const [holidays, setHolidays] = useState(initialHolidays)
@@ -142,6 +167,13 @@ export function SettingsPanel({
   const [parsedEntries, setParsedEntries] = useState<ParsedEntry[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [blockedPeriods, setBlockedPeriods] = useState(initialBlockedPeriods)
+  const [bpStartDate, setBpStartDate] = useState("")
+  const [bpEndDate, setBpEndDate] = useState("")
+  const [bpLabel, setBpLabel] = useState("")
+  const [bpExemptRoles, setBpExemptRoles] = useState<Set<string>>(new Set())
+  const [bpExemptUserIds, setBpExemptUserIds] = useState<Set<string>>(new Set())
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -208,6 +240,47 @@ export function SettingsPanel({
       await removeHoliday(id)
       setHolidays((prev) => prev.filter((h) => h.id !== id))
       toast.success("Holiday removed.")
+    })
+  }
+
+  const toggleBpRole = (role: string) =>
+    setBpExemptRoles((prev) => {
+      const next = new Set(prev)
+      next.has(role) ? next.delete(role) : next.add(role)
+      return next
+    })
+
+  const handleAddBlockedPeriod = () => {
+    if (!bpStartDate || !bpEndDate) { toast.error("Please select a start and end date."); return }
+    if (bpEndDate < bpStartDate) { toast.error("End date must be on or after the start date."); return }
+
+    startTransition(async () => {
+      const result = await createBlockedPeriod({
+        startDateISO: bpStartDate,
+        endDateISO: bpEndDate,
+        label: bpLabel,
+        exemptRoles: Array.from(bpExemptRoles),
+        exemptUserIds: Array.from(bpExemptUserIds),
+      })
+      if ("error" in result) { toast.error(result.error); return }
+      setBlockedPeriods((prev) =>
+        [...prev, result.period].sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+      )
+      setBpStartDate("")
+      setBpEndDate("")
+      setBpLabel("")
+      setBpExemptRoles(new Set())
+      setBpExemptUserIds(new Set())
+      toast.success("Blocked period added.")
+    })
+  }
+
+  const handleRemoveBlockedPeriod = (id: string) => {
+    startTransition(async () => {
+      const result = await deleteBlockedPeriod(id)
+      if (result && "error" in result) { toast.error(result.error); return }
+      setBlockedPeriods((prev) => prev.filter((p) => p.id !== id))
+      toast.success("Blocked period removed.")
     })
   }
 
@@ -502,6 +575,140 @@ export function SettingsPanel({
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     onClick={() => handleRemove(h.id)}
+                    disabled={isPending}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarX2 className="w-4 h-4 text-rose-500" />
+            Blocked Periods
+          </CardTitle>
+          <CardDescription>
+            Block a date range from being selected for leave. Exempt specific professors or whole roles from a given range.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="bp-start">Start Date</Label>
+                <Input
+                  id="bp-start"
+                  type="date"
+                  value={bpStartDate}
+                  onChange={(e) => setBpStartDate(e.target.value)}
+                  disabled={isPending}
+                  className="w-44"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bp-end">End Date</Label>
+                <Input
+                  id="bp-end"
+                  type="date"
+                  value={bpEndDate}
+                  onChange={(e) => setBpEndDate(e.target.value)}
+                  disabled={isPending}
+                  className="w-44"
+                />
+              </div>
+              <div className="space-y-1.5 flex-1 min-w-40">
+                <Label htmlFor="bp-label">
+                  Label <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="bp-label"
+                  placeholder="e.g. Mid-semester lockout"
+                  value={bpLabel}
+                  onChange={(e) => setBpLabel(e.target.value)}
+                  disabled={isPending}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Exempt roles</Label>
+              <div className="flex flex-wrap gap-3">
+                {Object.values(Role).map((role) => (
+                  <label key={role} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bpExemptRoles.has(role)}
+                      onChange={() => toggleBpRole(role)}
+                      disabled={isPending}
+                      className="h-4 w-4 rounded border-gray-300 accent-primary"
+                    />
+                    {getRoleLabel(role)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Exempt professors</Label>
+              <ProfessorMultiSelect
+                professors={professors}
+                selectedIds={bpExemptUserIds}
+                onChange={setBpExemptUserIds}
+                disabled={isPending}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleAddBlockedPeriod}
+                disabled={isPending || !bpStartDate || !bpEndDate}
+                className="gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                Add Blocked Period
+              </Button>
+            </div>
+          </div>
+
+          {blockedPeriods.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No blocked periods configured.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {blockedPeriods.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="text-rose-600 border-rose-300 font-normal">
+                      {format(parseDate(p.startDate), "MMM d, yyyy")} – {format(parseDate(p.endDate), "MMM d, yyyy")}
+                    </Badge>
+                    {p.label && <span className="text-sm text-muted-foreground">{p.label}</span>}
+                    {p.exemptRoles.map((role) => (
+                      <Badge key={role} variant="secondary" className="font-normal">
+                        {getRoleLabel(role)} exempt
+                      </Badge>
+                    ))}
+                    {p.exemptUsers.length > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {p.exemptUsers.length <= 3
+                          ? p.exemptUsers.map((u) => u.name || u.email).join(", ")
+                          : `${p.exemptUsers.length} professors exempt`}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleRemoveBlockedPeriod(p.id)}
                     disabled={isPending}
                   >
                     <Trash2 className="w-3.5 h-3.5" />

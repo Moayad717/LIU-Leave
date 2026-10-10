@@ -47,7 +47,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   const { start, end, label } = getCurrentAcademicYear()
 
-  const [leaveRequests, user, appSettings, holidays] = await Promise.all([
+  const [leaveRequests, user, appSettings, holidays, blockedPeriods] = await Promise.all([
     db.leaveRequest.findMany({
       where: {
         professorId: session.user.id,
@@ -64,11 +64,28 @@ export default async function DashboardPage({ searchParams }: Props) {
       where: { date: { gte: start, lte: end } },
       orderBy: { date: "asc" },
     }),
+    db.blockedPeriod.findMany({
+      where: { endDate: { gte: start }, startDate: { lte: end } },
+      include: { exemptUsers: { select: { id: true } } },
+    }),
   ])
 
   const submissionsOpen = appSettings?.submissionsOpen ?? true
   const maxLeaveDays = appSettings?.maxLeaveDays ?? 22
   const holidayISOs = holidays.map((h) => ({ iso: h.date.toISOString(), label: h.label }))
+
+  // Periods the current user is NOT exempt from (by role or by name)
+  const applicableBlockedPeriods = blockedPeriods
+    .filter((p) => {
+      const roleExempt = p.exemptRoles.includes(session.user.role as never)
+      const userExempt = p.exemptUsers.some((u) => u.id === session.user.id)
+      return !roleExempt && !userExempt
+    })
+    .map((p) => ({
+      startISO: p.startDate.toISOString(),
+      endISO: p.endDate.toISOString(),
+      label: p.label,
+    }))
 
   // Compute used days across non-rejected requests
   const rejectedStatuses = ["STEP1_REJECTED", "STEP2_REJECTED", "REJECTED"]
@@ -271,6 +288,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                 approvedDateISOs={approvedDateISOs}
                 pendingDateISOs={pendingDateISOs}
                 rejectedDateISOs={rejectedDateISOs}
+                blockedPeriods={applicableBlockedPeriods}
               />
             </>
           )}

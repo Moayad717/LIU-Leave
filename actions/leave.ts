@@ -30,6 +30,24 @@ export async function submitLeaveRequest(dates: string[]) {
       return { error: "Dates between September 16–30 are blocked (academic year closing period)." }
     }
 
+    // Block admin-configured date ranges, unless the user is exempt by role or by name
+    const blockedPeriods = await db.blockedPeriod.findMany({
+      where: { endDate: { gte: start }, startDate: { lte: end } },
+      include: { exemptUsers: { select: { id: true } } },
+    })
+    for (const period of blockedPeriods) {
+      const roleExempt = period.exemptRoles.includes(session.user.role as never)
+      const userExempt = period.exemptUsers.some((u) => u.id === session.user.id)
+      if (roleExempt || userExempt) continue
+
+      const inRange = parsedDates.some((d) => d >= period.startDate && d <= period.endDate)
+      if (inRange) {
+        return {
+          error: `Dates between ${period.startDate.toDateString()} and ${period.endDate.toDateString()} are blocked${period.label ? ` (${period.label})` : ""}.`,
+        }
+      }
+    }
+
     // Count days already used in active (non-rejected) requests this academic year
     const activeRequests = await db.leaveRequest.findMany({
       where: {
