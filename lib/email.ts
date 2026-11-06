@@ -4,7 +4,7 @@ import { format } from "date-fns"
 import { Role } from "@/types/enums"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = "LIU Leave System <onboarding@resend.dev>"
+const FROM = "ALMAS System <onboarding@resend.dev>"
 
 function getBaseUrl() {
   return (process.env.NEXTAUTH_URL ?? "http://localhost:3000").replace(/\/$/, "")
@@ -30,7 +30,7 @@ function buildHtml(heading: string, rows: [string, string][], link: string, link
     .join("")
   return (
     `<!DOCTYPE html><html><body style="font-family:sans-serif;color:#111;max-width:580px;margin:0 auto;padding:32px 24px">` +
-    `<div style="margin-bottom:8px;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em">LIU Leave System</div>` +
+    `<div style="margin-bottom:8px;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em">ALMAS System</div>` +
     `<h2 style="color:#1e40af;margin:0 0 20px;font-size:20px">${heading}</h2>` +
     `<table style="border-collapse:collapse;margin-bottom:24px">${rowsHtml}</table>` +
     `<a href="${link}" style="display:inline-block;background:#1e40af;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:500">${linkLabel}</a>` +

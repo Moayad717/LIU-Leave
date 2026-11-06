@@ -18,7 +18,7 @@ export default function SignInPage() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">LIU Leave</CardTitle>
+            <CardTitle className="text-2xl font-bold">ALMAS</CardTitle>
             <CardDescription className="mt-1 text-base">
               Lebanese International University
             </CardDescription>

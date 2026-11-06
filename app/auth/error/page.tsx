@@ -55,7 +55,7 @@ export default function AuthErrorPage({ searchParams }: Props) {
             <CardTitle className="text-2xl font-bold">{error.title}</CardTitle>
             <CardDescription className="mt-1 flex items-center justify-center gap-1">
               <GraduationCap className="w-4 h-4" />
-              LIU Leave System
+              ALMAS System
             </CardDescription>
           </div>
         </CardHeader>

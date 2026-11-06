@@ -19,7 +19,7 @@ export default async function OnboardingPage() {
             </div>
           </div>
           <div>
-            <CardTitle className="text-xl">Welcome to LIU Leave</CardTitle>
+            <CardTitle className="text-xl">Welcome to ALMAS</CardTitle>
             <CardDescription>
               Please select your campus and department to continue.
             </CardDescription>

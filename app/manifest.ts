@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LIU Leave",
-    short_name: "LIU Leave",
+    name: "ALMAS",
+    short_name: "ALMAS",
     description: "Lebanese International University — Professor Leave Management",
     start_url: "/dashboard",
     display: "standalone",

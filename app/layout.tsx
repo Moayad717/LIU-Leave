@@ -6,12 +6,12 @@ import { Providers } from "@/components/providers"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "LIU Leave",
+  title: "ALMAS",
   description: "Lebanese International University — Professor Leave Management",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "LIU Leave",
+    title: "ALMAS",
   },
   formatDetection: {
     telephone: false,

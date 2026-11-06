@@ -149,7 +149,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
       </div>
 
       <div className="hidden print:block mb-6">
-        <h1 className="text-2xl font-bold">LIU Leave — Leave Request</h1>
+        <h1 className="text-2xl font-bold">ALMAS — Leave Request</h1>
         <p className="text-sm text-muted-foreground">ID: {req.id}</p>
       </div>
 

@@ -1,4 +1,4 @@
-# LIU Leave
+# ALMAS
 
 A leave management system for Lebanese International University professors.
 Professors submit their annual leave days, and admins review, approve, or reject requests with full stats and overlap visibility.

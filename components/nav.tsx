@@ -76,7 +76,7 @@ export function Nav({ user }: { user: NavUser }) {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
               <GraduationCap className="w-4.5 h-4.5" />
             </div>
-            <span className="text-sm font-semibold text-foreground tracking-tight">LIU Leave</span>
+            <span className="text-sm font-semibold text-foreground tracking-tight">ALMAS</span>
           </Link>
 
           {/* Desktop nav */}
